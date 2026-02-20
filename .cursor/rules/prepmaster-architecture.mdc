@@ -1,0 +1,22 @@
+---
+description: Arquitetura e stack do PrepMaster - contexto central
+alwaysApply: true
+---
+
+# PrepMaster - Arquitetura e Princípios
+
+## Visão
+PrepMaster é um **Personal Supply Chain Manager** para cozinha. PWA Offline-First, Event-Driven, custo zero (R$ 0,00).
+
+## Stack Obrigatória
+- **Frontend:** React + Vite, `vite-plugin-pwa`, Zustand
+- **Backend:** Vercel (API + Webhooks), Upstash QStash, Firebase (Auth + Firestore)
+- **IA:** `@google/genai` — **Gemini 2.5 Flash** exclusivo; `responseMimeType: "application/json"` para extração
+
+## Princípios Arquiteturais
+1. **Event-Driven:** Requisições API < 2s. Processamento pesado (15–30s) assíncrono via QStash.
+2. **Offline-First:** Service Workers + IndexedDB. Firestore com persistência offline.
+3. **Custo Zero:** Respeitar limites Free Tier (QStash 10k/dia, Gemini 1.5k RPD, Firestore 50k leituras/dia).
+
+## Referência Completa
+Consultar `docs/architecture.md` e `docs/planning.md` para requisitos funcionais (RF01–RF11), RNFs, fluxos e Definition of Done.

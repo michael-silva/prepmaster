@@ -1,0 +1,26 @@
+---
+description: Padrões backend e API do PrepMaster (Vercel, QStash, extração IA)
+globs: "**/api/**/*.ts,**/api/**/*.js,**/functions/**/*.ts"
+alwaysApply: false
+---
+
+# Backend PrepMaster
+
+## API Produtora (RF02)
+- Recebe URL → cria documento `jobs` no Firestore com `status: pending` → publica no QStash → retorna **HTTP 202**
+- Tempo de resposta: **< 2 segundos** (evitar 504)
+- Sempre incluir `job_id` no retorno para o cliente rastrear
+
+## Webhook Consumidor
+- Rota protegida que recebe gatilho do QStash
+- Executa extração via **Gemini 2.5 Flash** com `fileData` (vídeo) ou HTML
+- `responseMimeType: "application/json"` obrigatório
+- Atualiza Firestore: `status: completed` + JSON da receita, ou `status: failed` + motivo legível em caso de erro
+- Capturar erros (URL inválida, vídeo privado) e persistir no job
+
+## Coleções Firestore
+- `jobs` — estado de extração (`pending`, `completed`, `failed`)
+- `recipes` — receitas extraídas
+- `shopping_list` — lista de compras
+- `pantry` — despensa (`status: true` = em estoque)
+- Regras: multi-tenant por `user_id` — leitura/escrita apenas do próprio usuário

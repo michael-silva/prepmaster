@@ -1,0 +1,24 @@
+---
+description: Requisitos funcionais e sprints do PrepMaster
+globs: "**/docs/**/*.md,**/src/**/*"
+alwaysApply: false
+---
+
+# Requisitos Funcionais (RF) — Referência Rápida
+
+| Sprint | RF | Nome | DoD Essencial |
+|--------|-----|------|---------------|
+| 1 | RF01 | Auth PWA | Google SSO, Firestore rules multi-tenant |
+| 2 | RF02 | Extração Multimodal | Job pending → QStash → Webhook → completed sem 504 |
+| 3 | RF03 | Feedback Reativo | onSnapshot, Toast em < 500ms |
+| 4 | RF05 | Sync Real-Time Offline | Checklist offline, sincroniza ao reconectar |
+| 5 | RF07 | Consolidação | Agrupar ingredientes, reduce < 50ms |
+| 6 | RF08 | Aisle Sorting | groupBy(aisle), fallback "Outros" |
+| 7 | RF06 | Cardápio Semanal | Drag receitas, exportar para shopping_list |
+| 8 | RF09 | Despensa | diff lista vs pantry, itens em estoque em accordion |
+| 9 | RF10 | Mise en Place | Agrupar preps por ingrediente + técnica |
+| 10 | RF11 | Cozinha Guiada | Stepper tela cheia, Wake Lock, hitboxes grandes |
+
+**RF04 (Playlists) — POSTERGADO.** Não implementar batch de playlists até validar RF02.
+
+Sempre consultar `docs/architecture.md` para fluxos detalhados e edge cases.

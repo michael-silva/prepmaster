@@ -1,0 +1,28 @@
+---
+description: Padrões frontend React e PWA do PrepMaster
+globs: "**/*.tsx,**/*.jsx,**/src/**/*.ts"
+alwaysApply: false
+---
+
+# Frontend PrepMaster
+
+## Estado e Escuta
+- **Zustand** para estado global (sessão, UI)
+- **Firebase `onSnapshot`** para reação em tempo real — nunca polling
+- Feedback de jobs: reagir em < 500ms à mudança `pending` → `completed` no Firestore
+
+## Offline e PWA
+- Persistência offline do Firestore ativa (IndexedDB)
+- Service Worker deve manter sessão em cache
+- Tratar modo avião: leitura/edição local; sincronização automática ao reconectar
+- Resolução de conflitos: `serverTimestamp` do Firebase
+
+## Renderização e Performance
+- Funções de consolidação (RF07): executar no cliente em **< 50ms**
+- Preferir `Array.prototype.groupBy()`, `reduce`, `filter` — complexidade O(n)
+- Lib `convert-units` ou algoritmo para conversão massa/volume
+
+## UX e Acessibilidade
+- Drag-and-Drop: `@dnd-kit/core` (suporte touch mobile)
+- Datas: `date-fns`
+- Wake Lock API para modo Cozinha Guiada — tratar `Promise rejection` em Low Power Mode
