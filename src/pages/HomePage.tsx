@@ -1,4 +1,5 @@
 import type { User } from "firebase/auth";
+import { Link } from "react-router-dom";
 import { signOut } from "@/lib/auth";
 import { InstallHint } from "@/components/InstallHint";
 
@@ -73,10 +74,24 @@ export function HomePage({ user }: HomePageProps) {
         <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
           Bem-vindo, {user.displayName?.split(" ")[0] ?? "chef"}!
         </h2>
-        <p style={{ color: "var(--color-muted)", margin: 0 }}>
-          Sua sessão está ativa. Em breve você poderá importar receitas,
-          planejar a semana e gerenciar listas de compras.
+        <p style={{ color: "var(--color-muted)", marginBottom: "1rem" }}>
+          Sua sessão está ativa. Importe receitas por URL e planeje sua semana.
         </p>
+        <Link
+          to="/nova-receita"
+          style={{
+            display: "inline-block",
+            padding: "0.75rem 1.25rem",
+            fontSize: "0.95rem",
+            fontWeight: 600,
+            background: "var(--color-accent)",
+            color: "var(--color-bg)",
+            borderRadius: "10px",
+            textDecoration: "none",
+          }}
+        >
+          Nova Receita
+        </Link>
       </section>
 
       <div style={{ marginTop: "1.5rem" }}>

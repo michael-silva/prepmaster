@@ -195,14 +195,27 @@ Após o primeiro deploy, a Vercel gera uma URL. Garanta que ela esteja em **Auth
 - [ ] Avatar do usuário carrega
 - [ ] Botão **Sair** funciona
 - [ ] PWA: no mobile/desktop, opção **Instalar app** ou **Adicionar à tela inicial**
+- [ ] **Nova Receita**: colar URL e Importar Magicamente enfileira a extração (Sprint 2)
 
-### 7.2 Possíveis problemas
+### 7.2 Variáveis para API (Sprint 2)
+
+Além das `VITE_*`, adicione no painel da Vercel (Settings → Environment Variables):
+
+- `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` (conta de serviço)
+- `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`
+- `QSTASH_WEBHOOK_URL` = `https://SEU-PROJETO.vercel.app/api/webhooks/extract-recipe`
+- `GEMINI_API_KEY`
+
+Detalhes: [docs/env-setup.md](./env-setup.md#9-variáveis-da-api-sprint-2)
+
+### 7.3 Possíveis problemas
 
 | Problema | Verificar |
 |----------|-----------|
 | Erro ao fazer login | Domínio da Vercel em Authorized domains? Variáveis env preenchidas? |
 | Avatar quebrado | Já corrigido com `referrerPolicy="no-referrer"` |
 | PWA não instala | Acesso via HTTPS? Build gerou `sw.js` e `manifest.webmanifest`? |
+| Importar receita falha | Variáveis da API (QStash, Gemini, Firebase Admin) configuradas? Rode `vercel dev` para testar API localmente. |
 | Variáveis não aplicadas | Rodar deploy novamente após alterar env |
 
 ---

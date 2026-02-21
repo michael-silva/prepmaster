@@ -30,3 +30,5 @@ dev-dist
 .env.local
 .env.*.local
 .firebase
+.vercel
+.env*.local

@@ -125,3 +125,30 @@ Ao fazer deploy na Vercel, adicione as mesmas variáveis:
 2. Cadastre cada uma das `VITE_*` com os mesmos valores
 3. Marque o ambiente (Production, Preview, Development)
 4. Faça um novo deploy para aplicar as mudanças
+
+---
+
+## 9. Variáveis da API (Sprint 2+)
+
+Para a extração assíncrona de receitas (Importar Magicamente):
+
+### 9.1 Firebase Admin (conta de serviço)
+
+1. Firebase Console → **Configurações do projeto** (ícone engrenagem)
+2. Aba **Contas de serviço** → **Gerar nova chave privada**
+3. Baixe o JSON e extraia:
+   - `project_id` → `FIREBASE_PROJECT_ID` (ou use o mesmo `VITE_FIREBASE_PROJECT_ID`)
+   - `client_email` → `FIREBASE_CLIENT_EMAIL`
+   - `private_key` → `FIREBASE_PRIVATE_KEY` (copie inteiro, incluindo `-----BEGIN` e `-----END`)
+
+### 9.2 Upstash QStash
+
+1. Acesse [Upstash Console](https://console.upstash.com/) → QStash
+2. Copie **Token** → `QSTASH_TOKEN`
+3. Em **Signing Keys**, copie **Current** e **Next** → `QSTASH_CURRENT_SIGNING_KEY`, `QSTASH_NEXT_SIGNING_KEY`
+4. `QSTASH_WEBHOOK_URL`: URL pública do webhook após deploy, ex: `https://seu-projeto.vercel.app/api/webhooks/extract-recipe`
+
+### 9.3 Google AI (Gemini)
+
+1. Acesse [Google AI Studio](https://aistudio.google.com/apikey) e crie uma API key
+2. Copie → `GEMINI_API_KEY`
