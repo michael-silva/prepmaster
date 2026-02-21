@@ -2,36 +2,9 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Client } from "@upstash/qstash";
 import { getAuth, getFirestore } from "./lib/firebase-admin.js";
 import { createLogger } from "./lib/logger.js";
+import { handleCorsPreflightOrMethod } from "./lib/cors.js";
 
 const URL_REGEX = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be|[\w-]+\.\w+(\/[\w.-]*)*)/i;
-
-const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  "http://127.0.0.1:5173",
-  "http://127.0.0.1:3000",
-];
-
-function getCorsOrigin(req: VercelRequest): string | undefined {
-  const origin = req.headers.origin;
-  if (!origin) return undefined;
-  const baseUrl = process.env.VERCEL_URL
-    ? `https://${process.env.VERCEL_URL}`
-    : undefined;
-  if (baseUrl && origin.startsWith(baseUrl)) return origin;
-  if (ALLOWED_ORIGINS.includes(origin)) return origin;
-  return undefined;
-}
-
-function setCorsHeaders(req: VercelRequest, res: VercelResponse): void {
-  const origin = getCorsOrigin(req);
-  if (origin) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Max-Age", "86400");
-}
 
 function isValidUrl(url: string): boolean {
   try {
@@ -46,17 +19,7 @@ export default async function handler(
   req: VercelRequest,
   res: VercelResponse
 ): Promise<void> {
-  setCorsHeaders(req, res);
-
-  if (req.method === "OPTIONS") {
-    res.status(204).end();
-    return;
-  }
-
-  if (req.method !== "POST") {
-    res.status(405).json({ error: "Method not allowed" });
-    return;
-  }
+  if (handleCorsPreflightOrMethod(req, res, "POST")) return;
 
   const log = createLogger({ fn: "import-recipe" });
 
