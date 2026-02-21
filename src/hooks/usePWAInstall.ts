@@ -2,7 +2,16 @@ import { useState, useEffect } from "react";
 
 function getPlatform(): "ios" | "android" | "desktop" {
   const ua = navigator.userAgent;
-  if (/iPad|iPhone|iPod/.test(ua)) return "ios";
+  if (/iPhone|iPod/.test(ua)) return "ios";
+  // iPadOS 13+ reporta "Macintosh"; detectar por touch + platform
+  if (/iPad/.test(ua)) return "ios";
+  if (
+    /Macintosh/.test(ua) &&
+    navigator.maxTouchPoints > 1 &&
+    "ontouchend" in document
+  ) {
+    return "ios";
+  }
   if (/Android/.test(ua)) return "android";
   return "desktop";
 }

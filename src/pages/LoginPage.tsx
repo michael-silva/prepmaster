@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { signInWithGoogle } from "@/lib/auth";
 import { useAuthStore } from "@/stores/authStore";
-import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { InstallHint } from "@/components/InstallHint";
 
 export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const authError = useAuthStore((s) => s.authError);
-  const { canInstall, install, showInstallHint, platform } = usePWAInstall();
 
   async function handleGoogleSignIn() {
     setError(null);
@@ -24,10 +23,6 @@ export function LoginPage() {
     if (signInError) {
       setError(signInError);
     }
-  }
-
-  async function handleInstall() {
-    await install();
   }
 
   const displayError = error ?? authError;
@@ -113,74 +108,19 @@ export function LoginPage() {
           {isSigningIn ? "Entrando..." : "Entrar com Google"}
         </button>
 
-        {canInstall && (
-          <button
-            type="button"
-            onClick={handleInstall}
-            style={{
-              width: "100%",
-              marginTop: "1rem",
-              padding: "0.875rem 1.5rem",
-              fontSize: "0.95rem",
-              fontWeight: 500,
-              background: "transparent",
-              color: "var(--color-accent)",
-              border: "1px solid var(--color-accent)",
-              borderRadius: "10px",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "0.5rem",
-            }}
-          >
-            <InstallIcon />
-            Instalar app
-          </button>
-        )}
-
-        {showInstallHint && (
-          <div
-            style={{
-              marginTop: "2rem",
-              padding: "1rem",
-              background: "rgba(26, 71, 42, 0.3)",
-              borderRadius: "10px",
-              fontSize: "0.9rem",
-              color: "var(--color-muted)",
-              textAlign: "left",
-            }}
-          >
-            <strong style={{ color: "var(--color-accent)" }}>
-              Como instalar:
-            </strong>
-            {platform === "ios" ? (
-              <p style={{ margin: "0.5rem 0 0", lineHeight: 1.6 }}>
-                Toque em <strong>Compartilhar</strong> (ícone ao lado da barra
-                de endereço) → role e selecione{" "}
-                <strong>Adicionar à Tela de Início</strong>.
-              </p>
-            ) : (
-              <p style={{ margin: "0.5rem 0 0", lineHeight: 1.6 }}>
-                Toque no menu <strong>⋮</strong> (três pontos) →{" "}
-                <strong>Instalar app</strong> ou{" "}
-                <strong>Adicionar à tela inicial</strong>.
-              </p>
-            )}
-          </div>
-        )}
-
-        {!canInstall && !showInstallHint && (
-          <p
-            style={{
-              marginTop: "2rem",
-              fontSize: "0.85rem",
-              color: "var(--color-muted)",
-            }}
-          >
-            Instale como app para usar offline no supermercado.
-          </p>
-        )}
+        <InstallHint
+          fallback={
+            <p
+              style={{
+                marginTop: "2rem",
+                fontSize: "0.85rem",
+                color: "var(--color-muted)",
+              }}
+            >
+              Instale como app para usar offline no supermercado.
+            </p>
+          }
+        />
       </div>
     </main>
   );
@@ -209,12 +149,3 @@ function GoogleIcon() {
   );
 }
 
-function InstallIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
-    </svg>
-  );
-}

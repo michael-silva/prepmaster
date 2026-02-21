@@ -1,5 +1,6 @@
 import type { User } from "firebase/auth";
 import { signOut } from "@/lib/auth";
+import { InstallHint } from "@/components/InstallHint";
 
 interface HomePageProps {
   user: User;
@@ -77,6 +78,10 @@ export function HomePage({ user }: HomePageProps) {
           planejar a semana e gerenciar listas de compras.
         </p>
       </section>
+
+      <div style={{ marginTop: "1.5rem" }}>
+        <InstallHint />
+      </div>
     </main>
   );
 }
