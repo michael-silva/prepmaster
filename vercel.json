@@ -3,8 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/webhooks/extract-recipe.ts": {
-      "bodyParser": false
-    }
+    "api/webhooks/extract-recipe.ts": { "maxDuration": 60 }
   }
 }

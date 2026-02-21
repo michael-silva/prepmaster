@@ -152,3 +152,7 @@ Para a extração assíncrona de receitas (Importar Magicamente):
 
 1. Acesse [Google AI Studio](https://aistudio.google.com/apikey) e crie uma API key
 2. Copie → `GEMINI_API_KEY`
+
+### 9.4 Testar localmente (sem deploy)
+
+Para rodar a fila QStash contra sua máquina, use um túnel (ngrok ou localtunnel). Ver [teste-local-qstash.md](./teste-local-qstash.md).
