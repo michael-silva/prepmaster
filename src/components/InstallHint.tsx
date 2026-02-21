@@ -37,34 +37,59 @@ export function InstallHint({ fallback }: InstallHintProps) {
   }
 
   if (showInstallHint) {
+    const hint =
+      platform === "ios"
+        ? "Compartilhar → Adicionar à Tela de Início"
+        : "Menu ⋮ → Instalar app ou Adicionar à tela inicial";
+
     return (
       <div
         style={{
           marginTop: "2rem",
-          padding: "1rem",
-          background: "rgba(26, 71, 42, 0.3)",
+          padding: "1rem 1.25rem",
+          background: "rgba(26, 71, 42, 0.35)",
           borderRadius: "10px",
-          fontSize: "0.9rem",
-          color: "var(--color-muted)",
-          textAlign: "left",
+          border: "1px solid rgba(124, 184, 130, 0.4)",
+          display: "flex",
+          alignItems: "center",
+          gap: "1rem",
         }}
       >
-        <strong style={{ color: "var(--color-accent)" }}>Como instalar:</strong>
-        {platform === "ios" ? (
-          <p style={{ margin: "0.5rem 0 0", lineHeight: 1.6 }}>
-            Toque em <strong>Compartilhar</strong> (ícone ao lado da barra de
-            endereço) → role e selecione{" "}
-            <strong>Adicionar à Tela de Início</strong>. Se não aparecer,
-            abra este site no Safari.
-          </p>
-        ) : (
-          <p style={{ margin: "0.5rem 0 0", lineHeight: 1.6 }}>
-            Toque no menu <strong>⋮</strong> (três pontos) →{" "}
-            <strong>Instalar app</strong> ou{" "}
-            <strong>Adicionar à tela inicial</strong>. Se não aparecer, abra no
-            Chrome.
-          </p>
-        )}
+        <div
+          style={{
+            flexShrink: 0,
+            width: 44,
+            height: 44,
+            borderRadius: "10px",
+            background: "rgba(124, 184, 130, 0.25)",
+            color: "var(--color-accent)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <InstallIcon />
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            style={{
+              fontWeight: 600,
+              color: "var(--color-text)",
+              fontSize: "1rem",
+            }}
+          >
+            Instalar app
+          </div>
+          <div
+            style={{
+              fontSize: "0.85rem",
+              color: "var(--color-muted)",
+              marginTop: "0.25rem",
+            }}
+          >
+            {hint}
+          </div>
+        </div>
       </div>
     );
   }
