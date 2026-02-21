@@ -44,15 +44,18 @@ export function usePWAInstall() {
     };
   }, []);
 
-  async function install() {
+  function install() {
     if (!deferredPrompt) return false;
-    await deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      setShowInstallButton(false);
-      setDeferredPrompt(null);
-    }
-    return outcome === "accepted";
+    // prompt() deve ser chamado de forma síncrona no handler do clique
+    // (user gesture). await antes pode quebrar no Android.
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(({ outcome }) => {
+      if (outcome === "accepted") {
+        setShowInstallButton(false);
+        setDeferredPrompt(null);
+      }
+    });
+    return true;
   }
 
   // No iOS, beforeinstallprompt NUNCA dispara; no Android pode demorar (30s+).

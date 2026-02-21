@@ -42,8 +42,19 @@ export function InstallHint({ fallback }: InstallHintProps) {
         ? "Compartilhar → Adicionar à Tela de Início"
         : "Menu ⋮ → Instalar app ou Adicionar à tela inicial";
 
+    // No Android, tentar install() ao tocar — deferredPrompt pode ter disparado depois
+    const handleClick = platform === "android" ? () => install() : undefined;
+
     return (
       <div
+        role={handleClick ? "button" : undefined}
+        tabIndex={handleClick ? 0 : undefined}
+        onClick={handleClick}
+        onKeyDown={
+          handleClick
+            ? (e) => e.key === "Enter" && handleClick()
+            : undefined
+        }
         style={{
           marginTop: "2rem",
           padding: "1rem 1.25rem",
@@ -53,6 +64,7 @@ export function InstallHint({ fallback }: InstallHintProps) {
           display: "flex",
           alignItems: "center",
           gap: "1rem",
+          cursor: handleClick ? "pointer" : undefined,
         }}
       >
         <div
