@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Client } from "@upstash/qstash";
-import { getAuth, getFirestore } from "./lib/firebase-admin";
+import { getAuth, getFirestore } from "./lib/firebase-admin.js";
 
 const URL_REGEX = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be|[\w-]+\.\w+(\/[\w.-]*)*)/i;
 

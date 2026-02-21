@@ -1,11 +1,11 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Receiver } from "@upstash/qstash";
 import { GoogleGenAI } from "@google/genai";
-import { getFirestore } from "../lib/firebase-admin";
+import { getFirestore } from "../lib/firebase-admin.js";
 import {
   RECIPE_EXTRACTION_PROMPT,
   type ExtractedRecipe,
-} from "../lib/recipe-schema";
+} from "../lib/recipe-schema.js";
 
 function getRawBody(req: VercelRequest): Promise<string> {
   return new Promise((resolve, reject) => {
