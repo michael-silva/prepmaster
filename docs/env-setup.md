@@ -156,3 +156,16 @@ Para a extração assíncrona de receitas (Importar Magicamente):
 ### 9.4 Testar localmente (sem deploy)
 
 Para rodar a fila QStash contra sua máquina, use um túnel (ngrok ou localtunnel). Ver [teste-local-qstash.md](./teste-local-qstash.md).
+
+---
+
+## 10. CORS e Deployment Protection
+
+Se o frontend rodando em `localhost:5173` não conseguir chamar a API na Vercel (erro "blocked by CORS policy"):
+
+1. **Headers no vercel.json**: O projeto já inclui CORS no `vercel.json` para `http://localhost:5173`. Se usar outra porta (ex.: 3000), ajuste no `vercel.json` e faça redeploy.
+
+2. **Deployment Protection**: Se o projeto tiver **Vercel Authentication**, **Password Protection** ou **Trusted IPs** ativos, requisições OPTIONS (preflight) podem ser bloqueadas antes de chegar à API. Nesse caso:
+   - Vercel → **Settings** → **Deployment Protection**
+   - Verifique se **OPTIONS Allowlist** está habilitada
+   - Garanta que `/api` (ou `/api/import-recipe`) está na lista de paths liberados para OPTIONS
