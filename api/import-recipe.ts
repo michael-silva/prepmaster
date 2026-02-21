@@ -86,6 +86,22 @@ export default async function handler(
     }
 
     const db = getFirestore();
+
+    const existing = await db
+      .collection("jobs")
+      .where("user_id", "==", userId)
+      .where("url", "==", url)
+      .where("status", "in", ["pending", "processing"])
+      .limit(1)
+      .get();
+
+    if (!existing.empty) {
+      const existingJobId = existing.docs[0].id;
+      log.info("duplicate url — returning existing job", { jobId: existingJobId, userId, url });
+      res.status(200).json({ jobId: existingJobId, deduplicated: true });
+      return;
+    }
+
     const jobRef = db.collection("jobs").doc();
     const jobId = jobRef.id;
 
@@ -111,6 +127,8 @@ export default async function handler(
     await client.publishJSON({
       url: webhookUrl,
       body: { jobId, url, userId },
+      retries: 3,
+      delay: "10s",
     });
 
     log.info("queued", { jobId, webhookUrl });

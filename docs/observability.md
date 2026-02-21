@@ -369,12 +369,123 @@ Não é possível testar diretamente porque requer assinatura QStash válida. Us
 
 ---
 
-## 8. Checklist Rápido de Troubleshooting
+## 8. Política de Retentativas (QStash)
 
-- [ ] Logs Vercel mostram o erro real? (`import-recipe error: ...`)
+### Como funciona
+
+```
+import-recipe                    QStash                         extract-recipe
+     │                              │                                 │
+     ├─ publishJSON(retries:3) ────>│                                 │
+     │   delay: 10s                 │                                 │
+     │                              ├── POST (tentativa 1) ─────────>│
+     │                              │                                 ├── 200 OK → sucesso, para
+     │                              │                                 ├── 500   → agenda retry
+     │                              │                                 │
+     │                              ├── POST (tentativa 2, +10s) ───>│
+     │                              │        ...até 3 retries         │
+```
+
+### Configuração atual
+
+| Parâmetro | Valor | Onde |
+|---|---|---|
+| `retries` | 3 | `import-recipe.ts` → `publishJSON()` |
+| `delay` | 10s | Tempo entre retries |
+| Backoff | Exponencial (padrão QStash) | 10s → 20s → 40s |
+
+### Erros permanentes vs transientes
+
+O webhook `extract-recipe` distingue dois tipos de erro:
+
+| Tipo | Resposta HTTP | QStash faz retry? | Exemplos |
+|---|---|---|---|
+| **Transiente** | `500` | Sim (até 3x) | Timeout de rede, rate limit Gemini, Firestore temporário |
+| **Permanente** | `200` (com body de erro) | Não | URL sem receita, vídeo privado, config ausente |
+
+Retornar `200` para erros permanentes **impede que o QStash gaste retries** em algo que nunca vai funcionar.
+
+No Firestore, jobs com erro permanente têm `permanent: true`:
+
+```
+jobs/{jobId}
+├── status: "failed"
+├── error: "Video may be private..."
+└── permanent: true          ← indica que retry não resolve
+```
+
+### Onde ver mensagens falhadas
+
+1. **Upstash Console** → QStash → **Events** (ou Messages)
+   - Filtre por destination URL
+   - Coluna **State**: `delivered` / `error` / `retry`
+   - Clique na mensagem para ver: body enviado, response code, tentativas
+2. **Firestore** → collection `jobs`
+   - `status: "failed"` + `permanent: true` → erro definitivo
+   - `status: "failed"` + sem `permanent` → falhou após todas as tentativas
+   - `status: "processing"` parado há muito tempo → pode ter travado
+   - `retry_count` mostra em qual tentativa estava
+
+### Retry manual
+
+No QStash Dashboard, mensagens falhadas têm botão **"Retry"** para reenviar manualmente.
+
+---
+
+## 9. Deduplicação de URL
+
+### Como funciona
+
+Antes de criar um novo job, `import-recipe` consulta o Firestore para verificar se já existe um job `pending` ou `processing` para a mesma URL + usuário:
+
+```
+POST /api/import-recipe  { url: "https://exemplo.com/bolo" }
+  │
+  ├─ Query: jobs where user_id == X AND url == Y AND status in ["pending","processing"]
+  │
+  ├─ Se existe → retorna jobId existente (200, deduplicated: true)
+  └─ Se não    → cria novo job e enfileira (202)
+```
+
+Isso evita:
+- Múltiplos jobs para a mesma URL enquanto um ainda está processando
+- Gasto duplicado de quota do Gemini
+- Receitas duplicadas no Firestore
+
+**Nota:** A deduplicação permite reimportar uma URL que já foi processada (status `completed` ou `failed`), caso o usuário queira tentar novamente.
+
+### Índice Firestore necessário
+
+A query de deduplicação usa campos compostos. O Firestore pode pedir para criar um índice. Se aparecer um erro `FAILED_PRECONDITION` nos logs, o Firestore inclui um link direto para criar o índice necessário. Campos:
+
+- Collection: `jobs`
+- Campos: `user_id` (Ascending) + `url` (Ascending) + `status` (Ascending)
+
+---
+
+## 10. Idempotência do Webhook
+
+O `extract-recipe` verifica o status do job antes de processar:
+
+```
+POST /api/webhooks/extract-recipe  (via QStash)
+  │
+  ├─ Busca job no Firestore
+  ├─ Se status == "completed" → retorna 200 (skip, noop)
+  └─ Se não → processa normalmente
+```
+
+Isso garante que retries do QStash **nunca criam receitas duplicadas**: se a primeira tentativa já completou com sucesso, todas as próximas são ignoradas com 200.
+
+---
+
+## 11. Checklist Rápido de Troubleshooting
+
+- [ ] Logs Vercel mostram o erro real? (buscar `"fn":"import-recipe"` ou `"fn":"extract-recipe"`)
 - [ ] Env vars existem no dashboard Vercel (não só no `.env.local`)?
 - [ ] `FIREBASE_PRIVATE_KEY` está com formato PEM válido na Vercel?
 - [ ] `QSTASH_WEBHOOK_URL` aponta para `https://.../api/webhooks/extract-recipe`?
 - [ ] Job foi criado no Firestore? (collection `jobs`)
 - [ ] QStash Dashboard mostra a mensagem como delivered?
+- [ ] Job está com `permanent: true`? (erro que retry não resolve)
 - [ ] Recipe foi criada no Firestore? (collection `recipes`)

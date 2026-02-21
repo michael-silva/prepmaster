@@ -8,6 +8,13 @@ import {
 } from "../lib/recipe-schema.js";
 import { createLogger } from "../lib/logger.js";
 
+class PermanentError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PermanentError";
+  }
+}
+
 function getRawBody(req: VercelRequest): Promise<string> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
@@ -121,6 +128,22 @@ export default async function handler(
   const db = getFirestore();
   const jobRef = db.collection("jobs").doc(jobId);
 
+  const jobSnap = await jobRef.get();
+  const jobData = jobSnap.data();
+  if (jobData?.status === "completed") {
+    jlog.info("skipped — job already completed", { recipeId: jobData.recipe_id });
+    res.status(200).json({ skipped: true, reason: "already completed" });
+    return;
+  }
+
+  const retryCount = parseInt(
+    (req.headers["upstash-retried"] as string) ?? "0",
+    10
+  );
+  jlog.info("attempt info", { retryCount, previousStatus: jobData?.status });
+
+  await jobRef.update({ status: "processing", retry_count: retryCount });
+
   try {
     const isYouTube =
       /youtube\.com|youtu\.be/i.test(url);
@@ -133,13 +156,13 @@ export default async function handler(
       pageContent = await fetchPageContent(url);
       jlog.info("page fetched", { contentLength: pageContent.length });
       if (!pageContent || pageContent.length < 100) {
-        throw new Error("Could not fetch or extract meaningful content from URL");
+        throw new PermanentError("Could not fetch or extract meaningful content from URL");
       }
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("GEMINI_API_KEY is not configured");
+      throw new PermanentError("GEMINI_API_KEY is not configured");
     }
 
     const ai = new GoogleGenAI({ apiKey });
@@ -160,7 +183,7 @@ export default async function handler(
     const recipe = parseRecipeJson(text);
 
     if (recipe.title === "Error" && recipe.ingredients?.length === 0) {
-      throw new Error("Video may be private, unavailable, or has no recipe content");
+      throw new PermanentError("Video may be private, unavailable, or has no recipe content");
     }
 
     recipe.source_url = url;
@@ -193,18 +216,24 @@ export default async function handler(
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Extraction failed";
-    jlog.error("extraction failed", err);
+    const isPermanent = err instanceof PermanentError;
+    jlog.error("extraction failed", { errorMessage, permanent: isPermanent, retryCount });
 
     try {
       await jobRef.update({
         status: "failed",
         completed_at: new Date(),
         error: errorMessage,
+        permanent: isPermanent,
       });
     } catch (updateErr) {
       jlog.error("failed to update job status", updateErr);
     }
 
+    if (isPermanent) {
+      res.status(200).json({ error: errorMessage, permanent: true });
+      return;
+    }
     res.status(500).json({ error: errorMessage });
   }
 }
