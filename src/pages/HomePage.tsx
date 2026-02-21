@@ -37,6 +37,7 @@ export function HomePage({ user }: HomePageProps) {
               width={36}
               height={36}
               style={{ borderRadius: "50%" }}
+              referrerPolicy="no-referrer"
             />
           )}
           <span style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>
