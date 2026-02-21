@@ -11,6 +11,7 @@ export default defineConfig({
       includeAssets: ["favicon.svg", "favicon.ico"],
       devOptions: { enabled: true },
       manifest: {
+        id: "/",
         name: "PrepMaster",
         short_name: "PrepMaster",
         description: "Gerenciador de cadeia de suprimentos para a cozinha",
@@ -20,6 +21,7 @@ export default defineConfig({
         orientation: "portrait",
         scope: "/",
         start_url: "/",
+        prefer_related_applications: false,
         icons: [
           { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
           { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },

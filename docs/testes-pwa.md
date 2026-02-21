@@ -171,6 +171,7 @@ npm run lint
 | Service Worker não registra em dev | Registro via script injetado usa `/sw.js` (só existe em prod) | Importar `registerSW` de `virtual:pwa-register` no código (usa `/dev-sw.js` em dev) |
 | beforeinstallprompt não dispara | Chrome exige manifest com ícones válidos; iOS nunca dispara | Ícones PNG; no mobile, siga as instruções exibidas na tela |
 | Login não funciona no celular (iOS) | Redirect usa third-party cookies bloqueados no Safari | O app usa popup; confirme que o domínio está em Authorized domains |
+| Botão instalar não funciona no Android | Ícones ausentes; critérios não atendidos; user gesture | Rode `npm run generate-icons`; build já inclui isso; aguarde ~30s + 1 toque |
 
 ## 7. Observações
 

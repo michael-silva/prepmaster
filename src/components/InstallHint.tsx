@@ -12,7 +12,10 @@ export function InstallHint({ fallback }: InstallHintProps) {
     return (
       <button
         type="button"
-        onClick={() => install()}
+        onClick={(e) => {
+          e.preventDefault();
+          install();
+        }}
         style={{
           width: "100%",
           marginTop: "1rem",

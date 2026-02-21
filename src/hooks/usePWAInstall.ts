@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 function getPlatform(): "ios" | "android" | "desktop" {
   const ua = navigator.userAgent;
   if (/iPhone|iPod/.test(ua)) return "ios";
-  // iPadOS 13+ reporta "Macintosh"; detectar por touch + platform
   if (/iPad/.test(ua)) return "ios";
   if (
     /Macintosh/.test(ua) &&
@@ -22,15 +21,27 @@ export function usePWAInstall() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [platform] = useState<"ios" | "android" | "desktop">(getPlatform);
+  const promptRef = useRef<BeforeInstallPromptEvent | null>(null);
+  promptRef.current = deferredPrompt;
 
   useEffect(() => {
     const handler = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      const ev = e as BeforeInstallPromptEvent;
+      promptRef.current = ev;
+      setDeferredPrompt(ev);
       setShowInstallButton(true);
     };
 
+    const installedHandler = () => {
+      setShowInstallButton(false);
+      setDeferredPrompt(null);
+      promptRef.current = null;
+      setIsInstalled(true);
+    };
+
     window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", installedHandler);
 
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -41,21 +52,26 @@ export function usePWAInstall() {
 
     return () => {
       window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", installedHandler);
     };
   }, []);
 
   function install() {
-    if (!deferredPrompt) return false;
-    // prompt() deve ser chamado de forma síncrona no handler do clique
-    // (user gesture). await antes pode quebrar no Android.
-    deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(({ outcome }) => {
-      if (outcome === "accepted") {
-        setShowInstallButton(false);
-        setDeferredPrompt(null);
-      }
-    });
-    return true;
+    const prompt = promptRef.current ?? deferredPrompt;
+    if (!prompt) return false;
+    try {
+      prompt.prompt();
+      prompt.userChoice.then(({ outcome }) => {
+        if (outcome === "accepted") {
+          setShowInstallButton(false);
+          setDeferredPrompt(null);
+          promptRef.current = null;
+        }
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   // No iOS, beforeinstallprompt NUNCA dispara; no Android pode demorar (30s+).
