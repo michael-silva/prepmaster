@@ -1,21 +1,36 @@
 import { useState } from "react";
 import { signInWithGoogle } from "@/lib/auth";
+import { useAuthStore } from "@/stores/authStore";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const authError = useAuthStore((s) => s.authError);
+  const { canInstall, install } = usePWAInstall();
 
   async function handleGoogleSignIn() {
     setError(null);
+    useAuthStore.getState().setAuthError(null);
     setIsSigningIn(true);
 
-    const { error: signInError } = await signInWithGoogle();
+    const { error: signInError, redirect } = await signInWithGoogle();
+
+    if (redirect) {
+      return;
+    }
 
     setIsSigningIn(false);
     if (signInError) {
       setError(signInError);
     }
   }
+
+  async function handleInstall() {
+    await install();
+  }
+
+  const displayError = error ?? authError;
 
   return (
     <main
@@ -57,7 +72,7 @@ export function LoginPage() {
           IA para extrair receitas de vídeos e blogs.
         </p>
 
-        {error && (
+        {displayError && (
           <div
             role="alert"
             style={{
@@ -69,7 +84,7 @@ export function LoginPage() {
               fontSize: "0.95rem",
             }}
           >
-            {error}
+            {displayError}
           </div>
         )}
 
@@ -98,15 +113,43 @@ export function LoginPage() {
           {isSigningIn ? "Entrando..." : "Entrar com Google"}
         </button>
 
-        <p
-          style={{
-            marginTop: "2rem",
-            fontSize: "0.85rem",
-            color: "var(--color-muted)",
-          }}
-        >
-          Instale como app para usar offline no supermercado.
-        </p>
+        {canInstall && (
+          <button
+            type="button"
+            onClick={handleInstall}
+            style={{
+              width: "100%",
+              marginTop: "1rem",
+              padding: "0.875rem 1.5rem",
+              fontSize: "0.95rem",
+              fontWeight: 500,
+              background: "transparent",
+              color: "var(--color-accent)",
+              border: "1px solid var(--color-accent)",
+              borderRadius: "10px",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.5rem",
+            }}
+          >
+            <InstallIcon />
+            Instalar app
+          </button>
+        )}
+
+        {!canInstall && (
+          <p
+            style={{
+              marginTop: "2rem",
+              fontSize: "0.85rem",
+              color: "var(--color-muted)",
+            }}
+          >
+            Instale como app para usar offline no supermercado.
+          </p>
+        )}
       </div>
     </main>
   );
@@ -131,6 +174,16 @@ function GoogleIcon() {
         fill="#fff"
         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
       />
+    </svg>
+  );
+}
+
+function InstallIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   );
 }

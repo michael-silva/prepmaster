@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate-icons": "npx @vite-pwa/assets-generator public/favicon.svg -r . -p minimal",
     "lint": "eslint .",
     "preview": "vite preview",
     "prepare": "husky"

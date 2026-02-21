@@ -42,13 +42,19 @@ firebase login
 firebase deploy --only firestore:rules
 ```
 
-### 4. Rodar em desenvolvimento
+### 4. Gerar ícones PWA (uma vez)
+
+```bash
+npm run generate-icons
+```
+
+### 5. Rodar em desenvolvimento
 
 ```bash
 npm run dev
 ```
 
-### 5. Build e deploy (Vercel)
+### 6. Build e deploy (Vercel)
 
 ```bash
 npm run build

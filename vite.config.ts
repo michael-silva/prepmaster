@@ -8,7 +8,8 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.svg"],
+      includeAssets: ["favicon.svg", "favicon.ico"],
+      devOptions: { enabled: true },
       manifest: {
         name: "PrepMaster",
         short_name: "PrepMaster",
@@ -20,11 +21,19 @@ export default defineConfig({
         scope: "/",
         start_url: "/",
         icons: [
+          { src: "pwa-64x64.png", sizes: "64x64", type: "image/png" },
+          { src: "pwa-192x192.png", sizes: "192x192", type: "image/png" },
           {
-            src: "favicon.svg",
-            sizes: "any",
-            type: "image/svg+xml",
+            src: "pwa-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
             purpose: "any",
+          },
+          {
+            src: "maskable-icon-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
           },
         ],
       },

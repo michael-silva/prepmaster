@@ -127,6 +127,16 @@ Referência completa: [docs/env-setup.md](./env-setup.md)
 
 ---
 
+## Parte 4.5: Gerar ícones PWA (antes do build)
+
+```bash
+npm run generate-icons
+```
+
+Sem os ícones PNG (192x192, 512x512), o PWA não é instalável. Rode este comando pelo menos uma vez.
+
+---
+
 ## Parte 5: Deploy na Vercel
 
 ### Opção A: Via painel (recomendado)
