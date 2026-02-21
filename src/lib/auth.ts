@@ -21,17 +21,10 @@ function getAuthErrorMessage(code: string, fallback: string): string {
 }
 
 export async function signInWithGoogle() {
-  const isMobile =
-    /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-      navigator.userAgent
-    );
-
   try {
-    if (isMobile) {
-      await signInWithRedirect(auth, googleProvider);
-      return { user: null, error: null, redirect: true };
-    }
-
+    // Usar popup em todos os dispositivos: redirect quebra no iOS Safari
+    // por bloqueio de third-party cookies (authDomain cross-origin).
+    // Popup não depende de cookies third-party e geralmente funciona melhor.
     const result = await signInWithPopup(auth, googleProvider);
     return { user: result.user, error: null, redirect: false };
   } catch (err) {
@@ -39,9 +32,15 @@ export async function signInWithGoogle() {
     const isOffline =
       authError.code === "auth/network-request-failed" || !navigator.onLine;
 
+    // Se popup for bloqueado (ex.: alguns navegadores mobile), tentar redirect.
+    // Nota: redirect pode falhar no iOS Safari por third-party cookies.
     if (authError.code === "auth/popup-blocked") {
-      await signInWithRedirect(auth, googleProvider);
-      return { user: null, error: null, redirect: true };
+      try {
+        await signInWithRedirect(auth, googleProvider);
+        return { user: null, error: null, redirect: true };
+      } catch {
+        // redirect falhou, retornar erro de popup
+      }
     }
 
     return {

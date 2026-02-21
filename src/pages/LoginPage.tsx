@@ -7,7 +7,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
   const authError = useAuthStore((s) => s.authError);
-  const { canInstall, install } = usePWAInstall();
+  const { canInstall, install, showInstallHint, platform } = usePWAInstall();
 
   async function handleGoogleSignIn() {
     setError(null);
@@ -139,7 +139,38 @@ export function LoginPage() {
           </button>
         )}
 
-        {!canInstall && (
+        {showInstallHint && (
+          <div
+            style={{
+              marginTop: "2rem",
+              padding: "1rem",
+              background: "rgba(26, 71, 42, 0.3)",
+              borderRadius: "10px",
+              fontSize: "0.9rem",
+              color: "var(--color-muted)",
+              textAlign: "left",
+            }}
+          >
+            <strong style={{ color: "var(--color-accent)" }}>
+              Como instalar:
+            </strong>
+            {platform === "ios" ? (
+              <p style={{ margin: "0.5rem 0 0", lineHeight: 1.6 }}>
+                Toque em <strong>Compartilhar</strong> (ícone ao lado da barra
+                de endereço) → role e selecione{" "}
+                <strong>Adicionar à Tela de Início</strong>.
+              </p>
+            ) : (
+              <p style={{ margin: "0.5rem 0 0", lineHeight: 1.6 }}>
+                Toque no menu <strong>⋮</strong> (três pontos) →{" "}
+                <strong>Instalar app</strong> ou{" "}
+                <strong>Adicionar à tela inicial</strong>.
+              </p>
+            )}
+          </div>
+        )}
+
+        {!canInstall && !showInstallHint && (
           <p
             style={{
               marginTop: "2rem",

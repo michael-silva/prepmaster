@@ -169,10 +169,12 @@ npm run lint
 |----------|-------|---------|
 | PWA não instala / botão não aparece | Manifest sem ícones PNG 192x192 e 512x512 | Rodar `npm run generate-icons` |
 | Service Worker não registra em dev | Registro via script injetado usa `/sw.js` (só existe em prod) | Importar `registerSW` de `virtual:pwa-register` no código (usa `/dev-sw.js` em dev) |
-| beforeinstallprompt não dispara | Chrome exige manifest com ícones válidos | Ícones PNG configurados no manifest |
+| beforeinstallprompt não dispara | Chrome exige manifest com ícones válidos; iOS nunca dispara | Ícones PNG; no mobile, siga as instruções exibidas na tela |
+| Login não funciona no celular (iOS) | Redirect usa third-party cookies bloqueados no Safari | O app usa popup; confirme que o domínio está em Authorized domains |
 
 ## 7. Observações
 
 - **beforeinstallprompt:** Nem todos os navegadores disparam. Chrome/Edge no desktop costumam disparar; Safari não usa esse evento.
-- **iOS:** Instalação apenas via "Adicionar à Tela de Início" no Safari.
-- **Android:** Pode aparecer banner automático de instalação além do botão customizado.
+- **iOS:** Instalação apenas via "Adicionar à Tela de Início" no Safari. O app exibe instruções na tela de login.
+- **Android:** Pode aparecer banner automático; o app também mostra instruções manuais quando o evento não dispara.
+- **Login no mobile:** Usa popup em todos os dispositivos (não redirect), pois o redirect quebra no iOS Safari por bloqueio de third-party cookies.
