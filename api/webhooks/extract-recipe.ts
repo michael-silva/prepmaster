@@ -6,6 +6,7 @@ import {
   RECIPE_EXTRACTION_PROMPT,
   type ExtractedRecipe,
 } from "../lib/recipe-schema.js";
+import { createLogger } from "../lib/logger.js";
 
 function getRawBody(req: VercelRequest): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -70,8 +71,10 @@ export default async function handler(
   const currentKey = process.env.QSTASH_CURRENT_SIGNING_KEY;
   const nextKey = process.env.QSTASH_NEXT_SIGNING_KEY;
 
+  const log = createLogger({ fn: "extract-recipe" });
+
   if (!currentKey || !nextKey) {
-    console.error("Missing QStash signing keys");
+    log.error("missing signing keys");
     res.status(500).json({ error: "Server misconfiguration" });
     return;
   }
@@ -93,7 +96,7 @@ export default async function handler(
       return;
     }
   } catch (err) {
-    console.error("QStash signature verification failed:", err);
+    log.error("signature verification failed", err);
     res.status(401).json({ error: "Invalid signature" });
     return;
   }
@@ -112,6 +115,9 @@ export default async function handler(
     return;
   }
 
+  const jlog = log.child({ jobId, userId, url });
+  jlog.info("processing started");
+
   const db = getFirestore();
   const jobRef = db.collection("jobs").doc(jobId);
 
@@ -121,9 +127,11 @@ export default async function handler(
 
     let pageContent: string;
     if (isYouTube) {
+      jlog.info("youtube url detected");
       pageContent = `[YouTube video URL: ${url}]\n\nExtract recipe information from this YouTube cooking video. Use the URL as source_url. If the video is private, unavailable, or has no recipe content, return a JSON with title "Error" and ingredients/steps as empty arrays.`;
     } else {
       pageContent = await fetchPageContent(url);
+      jlog.info("page fetched", { contentLength: pageContent.length });
       if (!pageContent || pageContent.length < 100) {
         throw new Error("Could not fetch or extract meaningful content from URL");
       }
@@ -148,6 +156,7 @@ export default async function handler(
       throw new Error("Empty response from Gemini");
     }
 
+    jlog.info("gemini response received", { responseLength: text.length });
     const recipe = parseRecipeJson(text);
 
     if (recipe.title === "Error" && recipe.ingredients?.length === 0) {
@@ -179,11 +188,12 @@ export default async function handler(
       recipe_id: recipeRef.id,
     });
 
+    jlog.info("completed", { recipeId: recipeRef.id, title: recipe.title });
     res.status(200).json({ success: true, recipeId: recipeRef.id });
   } catch (err) {
     const errorMessage =
       err instanceof Error ? err.message : "Extraction failed";
-    console.error("extract-recipe error:", err);
+    jlog.error("extraction failed", err);
 
     try {
       await jobRef.update({
@@ -192,7 +202,7 @@ export default async function handler(
         error: errorMessage,
       });
     } catch (updateErr) {
-      console.error("Failed to update job status:", updateErr);
+      jlog.error("failed to update job status", updateErr);
     }
 
     res.status(500).json({ error: errorMessage });

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { Client } from "@upstash/qstash";
 import { getAuth, getFirestore } from "./lib/firebase-admin.js";
+import { createLogger } from "./lib/logger.js";
 
 const URL_REGEX = /^https?:\/\/(www\.)?(youtube\.com|youtu\.be|[\w-]+\.\w+(\/[\w.-]*)*)/i;
 
@@ -57,6 +58,8 @@ export default async function handler(
     return;
   }
 
+  const log = createLogger({ fn: "import-recipe" });
+
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith("Bearer ")) {
@@ -67,6 +70,7 @@ export default async function handler(
     const idToken = authHeader.slice(7);
     const decoded = await getAuth().verifyIdToken(idToken);
     const userId = decoded.uid;
+    log.info("auth ok", { userId });
 
     const body = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
     const url = body?.url?.trim();
@@ -91,6 +95,7 @@ export default async function handler(
       status: "pending",
       created_at: new Date(),
     });
+    log.info("job created", { jobId, userId, url });
 
     const webhookUrl = process.env.QSTASH_WEBHOOK_URL;
     if (!webhookUrl) {
@@ -108,9 +113,10 @@ export default async function handler(
       body: { jobId, url, userId },
     });
 
+    log.info("queued", { jobId, webhookUrl });
     res.status(202).json({ jobId });
   } catch (err) {
-    console.error("import-recipe error:", err);
+    log.error("handler failed", err);
     const msg = err instanceof Error ? err.message : "";
     if (msg.includes("auth") || msg.includes("token") || msg.includes("id-token")) {
       res.status(401).json({ error: "Invalid or expired token" });
