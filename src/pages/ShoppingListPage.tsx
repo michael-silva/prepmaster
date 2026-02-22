@@ -29,7 +29,7 @@ function groupByAisle(items: ConsolidatedItem[]): AisleGroup[] {
   const groups = new Map<string, ConsolidatedItem[]>();
 
   for (const item of items) {
-    const aisle = item.aisle || "Outros";
+    const aisle = item.aisle ?? "Outros";
     const list = groups.get(aisle);
     if (list) {
       list.push(item);
@@ -201,15 +201,13 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
   );
 }
 
-function ItemRow({
-  item,
-  onToggle,
-  onRemove,
-}: {
+interface ItemRowProps {
   item: ConsolidatedItem;
   onToggle: () => void;
   onRemove: () => void;
-}) {
+}
+
+function ItemRow({ item, onToggle, onRemove }: ItemRowProps) {
   const label = formatConsolidatedLabel(item);
   const mergedCount = item.docIds.length;
 

@@ -14,6 +14,7 @@ interface ToastState {
   removeToast: (id: string) => void;
 }
 
+const TOAST_DURATION_MS = 4000;
 let counter = 0;
 
 export const useToastStore = create<ToastState>((set) => ({
@@ -23,7 +24,7 @@ export const useToastStore = create<ToastState>((set) => ({
     set((s) => ({ toasts: [...s.toasts, { id, message, type }] }));
     setTimeout(() => {
       set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) }));
-    }, 4000);
+    }, TOAST_DURATION_MS);
   },
   removeToast: (id) =>
     set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),

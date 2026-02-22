@@ -1,112 +1,27 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import type { User } from "firebase/auth";
-import { doc, onSnapshot, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-import { importRecipe, type Recipe } from "@/lib/api";
 import { RecipeForm, type RecipeFormData } from "@/components/RecipeForm";
 import { updateRecipe } from "@/lib/recipes";
 import { syncPrepCatalog } from "@/lib/prepCatalog";
 import { usePrepCatalog } from "@/hooks/usePrepCatalog";
+import { useImportRecipe } from "@/hooks/useImportRecipe";
 import { useToastStore } from "@/stores/toastStore";
 
 interface NewRecipePageProps {
   user: User;
 }
 
-type Phase = "form" | "watching" | "done" | "error";
-
 export function NewRecipePage({ user }: NewRecipePageProps) {
   const [url, setUrl] = useState("");
-  const [phase, setPhase] = useState<Phase>("form");
-  const [jobStatus, setJobStatus] = useState<string>("pending");
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [recipeId, setRecipeId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [permanent, setPermanent] = useState(false);
   const [saving, setSaving] = useState(false);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
   const { entries: prepEntries } = usePrepCatalog(user);
   const addToast = useToastStore((s) => s.addToast);
   const navigate = useNavigate();
-
-  const getToken = useCallback(() => user.getIdToken(), [user]);
-
-  useEffect(() => {
-    return () => unsubscribeRef.current?.();
-  }, []);
-
-  function watchJob(jobId: string) {
-    unsubscribeRef.current?.();
-
-    const jobRef = doc(db, "jobs", jobId);
-    unsubscribeRef.current = onSnapshot(jobRef, async (snap) => {
-      if (!snap.exists()) return;
-      const data = snap.data();
-
-      setJobStatus(data.status);
-
-      if (data.status === "completed" && data.recipe_id) {
-        unsubscribeRef.current?.();
-        setRecipeId(data.recipe_id);
-        try {
-          const recipeSnap = await getDoc(doc(db, "recipes", data.recipe_id));
-          if (recipeSnap.exists()) {
-            setRecipe(recipeSnap.data() as Recipe);
-            setPhase("done");
-          }
-        } catch {
-          setRecipe({
-            title: data.recipe_title || "Receita importada",
-            source_url: data.url,
-            ingredients: [],
-            steps: [],
-          });
-          setPhase("done");
-        }
-      } else if (data.status === "failed") {
-        unsubscribeRef.current?.();
-        setError(data.error ?? "Extração falhou.");
-        setPermanent(!!data.permanent);
-        setPhase("error");
-      }
-    });
-  }
+  const { phase, jobStatus, recipe, recipeId, error, isPermanent, startImport, reset } = useImportRecipe(user);
 
   async function handleImport() {
-    const trimmed = url.trim();
-    if (!trimmed) return;
-
-    setPhase("watching");
-    setError(null);
-    setRecipe(null);
-    setRecipeId(null);
-    setJobStatus("pending");
-    setPermanent(false);
-
-    try {
-      const token = await getToken();
-      const result = await importRecipe(trimmed, token);
-
-      if (result.forked && result.recipeId) {
-        setRecipeId(result.recipeId);
-        const recipeSnap = await getDoc(doc(db, "recipes", result.recipeId));
-        if (recipeSnap.exists()) {
-          setRecipe(recipeSnap.data() as Recipe);
-        } else {
-          setRecipe({ title: "Receita importada", source_url: trimmed, ingredients: [], steps: [] });
-        }
-        setPhase("done");
-        return;
-      }
-
-      if (result.jobId) {
-        watchJob(result.jobId);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao importar.");
-      setPhase("error");
-    }
+    await startImport(url);
   }
 
   async function handleSave(data: RecipeFormData) {
@@ -127,28 +42,20 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
   }
 
   function handleReset() {
-    unsubscribeRef.current?.();
-    setPhase("form");
+    reset();
     setUrl("");
-    setError(null);
-    setRecipe(null);
-    setRecipeId(null);
-    setJobStatus("pending");
-    setPermanent(false);
   }
 
   return (
-    <main style={{ minHeight: "100vh", padding: "1.5rem", background: "var(--color-bg)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-        <Link to="/" style={{ color: "var(--color-muted)", textDecoration: "none", fontSize: "1.25rem" }}>
-          ←
-        </Link>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0 }}>Nova Receita</h1>
+    <main style={pageStyle}>
+      <div style={headerStyle}>
+        <Link to="/" style={backLinkStyle}>←</Link>
+        <h1 style={titleStyle}>Nova Receita</h1>
       </div>
 
       {phase === "form" && (
         <>
-          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+          <div style={tabRowStyle}>
             <span style={activeTabStyle}>Importar URL</span>
             <Link to="/criar-receita" style={inactiveTabStyle}>Criar Manualmente</Link>
           </div>
@@ -156,16 +63,10 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
         </>
       )}
 
-      {phase === "watching" && (
-        <WatchingIndicator status={jobStatus} />
-      )}
+      {phase === "watching" && <WatchingIndicator status={jobStatus} />}
 
-      {phase === "error" && (
-        <ErrorCard
-          message={error!}
-          permanent={permanent}
-          onRetry={handleReset}
-        />
+      {phase === "error" && error && (
+        <ErrorCard message={error} isPermanent={isPermanent} onRetry={handleReset} />
       )}
 
       {phase === "done" && recipe && (
@@ -199,15 +100,13 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
   );
 }
 
-function ImportForm({
-  url,
-  setUrl,
-  onImport,
-}: {
+interface ImportFormProps {
   url: string;
   setUrl: (v: string) => void;
   onImport: () => void;
-}) {
+}
+
+function ImportForm({ url, setUrl, onImport }: ImportFormProps) {
   return (
     <section style={cardStyle}>
       <p style={{ color: "var(--color-muted)", marginBottom: "1rem", fontSize: "0.95rem" }}>
@@ -228,7 +127,11 @@ function ImportForm({
   );
 }
 
-function WatchingIndicator({ status }: { status: string }) {
+interface WatchingIndicatorProps {
+  status: string;
+}
+
+function WatchingIndicator({ status }: WatchingIndicatorProps) {
   const labels: Record<string, string> = {
     pending: "Na fila...",
     processing: "Extraindo receita com IA...",
@@ -249,31 +152,18 @@ function WatchingIndicator({ status }: { status: string }) {
   );
 }
 
-function ErrorCard({
-  message,
-  permanent,
-  onRetry,
-}: {
+interface ErrorCardProps {
   message: string;
-  permanent?: boolean;
+  isPermanent: boolean;
   onRetry: () => void;
-}) {
+}
+
+function ErrorCard({ message, isPermanent, onRetry }: ErrorCardProps) {
   return (
     <section style={cardStyle}>
-      <div
-        role="alert"
-        style={{
-          padding: "1rem",
-          borderRadius: "8px",
-          background: "rgba(244, 67, 54, 0.15)",
-          color: "#ff8a80",
-          marginBottom: "1rem",
-          fontSize: "0.95rem",
-          lineHeight: 1.5,
-        }}
-      >
+      <div role="alert" style={alertStyle}>
         {message}
-        {permanent && (
+        {isPermanent && (
           <span style={{ display: "block", marginTop: "0.5rem", fontSize: "0.8rem", opacity: 0.7 }}>
             Este erro é permanente e não será resolvido com nova tentativa para esta URL.
           </span>
@@ -285,6 +175,37 @@ function ErrorCard({
     </section>
   );
 }
+
+const pageStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  padding: "1.5rem",
+  background: "var(--color-bg)",
+};
+
+const headerStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "1rem",
+  marginBottom: "1.5rem",
+};
+
+const backLinkStyle: React.CSSProperties = {
+  color: "var(--color-muted)",
+  textDecoration: "none",
+  fontSize: "1.25rem",
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: "1.5rem",
+  fontWeight: 600,
+  margin: 0,
+};
+
+const tabRowStyle: React.CSSProperties = {
+  display: "flex",
+  gap: "0.5rem",
+  marginBottom: "1rem",
+};
 
 const cardStyle: React.CSSProperties = {
   background: "var(--color-surface)",
@@ -340,6 +261,16 @@ const secondaryBtnStyle: React.CSSProperties = {
   borderRadius: "10px",
   cursor: "pointer",
   marginTop: "1rem",
+};
+
+const alertStyle: React.CSSProperties = {
+  padding: "1rem",
+  borderRadius: "8px",
+  background: "rgba(244, 67, 54, 0.15)",
+  color: "#ff8a80",
+  marginBottom: "1rem",
+  fontSize: "0.95rem",
+  lineHeight: 1.5,
 };
 
 const spinnerStyle: React.CSSProperties = {

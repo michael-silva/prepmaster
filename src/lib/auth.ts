@@ -3,7 +3,7 @@ import {
   signInWithRedirect,
   getRedirectResult,
   signOut as firebaseSignOut,
-  type AuthError,
+  type User,
 } from "firebase/auth";
 import { auth, googleProvider } from "./firebase";
 
@@ -16,30 +16,50 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
     "Sem conexão com a internet. Conecte-se para fazer login.",
 };
 
+interface AuthErrorLike {
+  code: string;
+  message: string;
+}
+
+function isAuthError(err: unknown): err is AuthErrorLike {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    typeof (err as Record<string, unknown>).code === "string"
+  );
+}
+
 function getAuthErrorMessage(code: string, fallback: string): string {
   return AUTH_ERROR_MESSAGES[code] ?? fallback;
 }
 
-export async function signInWithGoogle() {
+interface SignInResult {
+  user: User | null;
+  error: string | null;
+  redirect: boolean;
+}
+
+// Popup em todos os dispositivos: redirect quebra no iOS Safari
+// por bloqueio de third-party cookies (authDomain cross-origin).
+export async function signInWithGoogle(): Promise<SignInResult> {
   try {
-    // Usar popup em todos os dispositivos: redirect quebra no iOS Safari
-    // por bloqueio de third-party cookies (authDomain cross-origin).
-    // Popup não depende de cookies third-party e geralmente funciona melhor.
     const result = await signInWithPopup(auth, googleProvider);
     return { user: result.user, error: null, redirect: false };
   } catch (err) {
-    const authError = err as AuthError;
-    const isOffline =
-      authError.code === "auth/network-request-failed" || !navigator.onLine;
+    if (!isAuthError(err)) {
+      return { user: null, error: "Erro ao entrar. Tente novamente.", redirect: false };
+    }
 
-    // Se popup for bloqueado (ex.: alguns navegadores mobile), tentar redirect.
-    // Nota: redirect pode falhar no iOS Safari por third-party cookies.
-    if (authError.code === "auth/popup-blocked") {
+    const isOffline = err.code === "auth/network-request-failed" || !navigator.onLine;
+
+    // Se popup for bloqueado, tentar redirect como fallback.
+    if (err.code === "auth/popup-blocked") {
       try {
         await signInWithRedirect(auth, googleProvider);
         return { user: null, error: null, redirect: true };
       } catch {
-        // redirect falhou, retornar erro de popup
+        // redirect falhou — retornar erro de popup
       }
     }
 
@@ -47,16 +67,18 @@ export async function signInWithGoogle() {
       user: null,
       error: isOffline
         ? getAuthErrorMessage("auth/network-request-failed", "Sem conexão.")
-        : getAuthErrorMessage(
-            authError.code ?? "",
-            authError.message ?? "Erro ao entrar. Tente novamente."
-          ),
+        : getAuthErrorMessage(err.code, err.message ?? "Erro ao entrar. Tente novamente."),
       redirect: false,
     };
   }
 }
 
-export async function handleRedirectResult() {
+interface RedirectResult {
+  user: User | null;
+  error: string | null;
+}
+
+export async function handleRedirectResult(): Promise<RedirectResult | null> {
   try {
     const result = await getRedirectResult(auth);
     if (result?.user) {
@@ -64,17 +86,16 @@ export async function handleRedirectResult() {
     }
     return null;
   } catch (err) {
-    const authError = err as AuthError;
+    if (!isAuthError(err)) {
+      return { user: null, error: "Erro ao concluir o login." };
+    }
     return {
       user: null,
-      error: getAuthErrorMessage(
-        authError.code ?? "",
-        authError.message ?? "Erro ao concluir o login."
-      ),
+      error: getAuthErrorMessage(err.code, err.message ?? "Erro ao concluir o login."),
     };
   }
 }
 
-export async function signOut() {
+export async function signOut(): Promise<void> {
   await firebaseSignOut(auth);
 }

@@ -25,7 +25,7 @@ function normalizeKey(s: string): string {
   return s.trim().toLowerCase();
 }
 
-export async function syncPrepCatalog(uid: string, miseEnPlace: MiseEnPlace[]) {
+export async function syncPrepCatalog(uid: string, miseEnPlace: MiseEnPlace[]): Promise<void> {
   if (miseEnPlace.length === 0) return;
 
   const existingSnap = await getDocs(
@@ -38,7 +38,7 @@ export async function syncPrepCatalog(uid: string, miseEnPlace: MiseEnPlace[]) {
     existingKeys.add(`${normalizeKey(data.ingredient)}::${normalizeKey(data.technique)}`);
   });
 
-  const promises: Promise<unknown>[] = [];
+  const promises: Array<Promise<unknown>> = [];
   for (const item of miseEnPlace) {
     const key = `${normalizeKey(item.ingredient)}::${normalizeKey(item.technique)}`;
     if (existingKeys.has(key)) continue;
@@ -61,14 +61,13 @@ export async function syncPrepCatalog(uid: string, miseEnPlace: MiseEnPlace[]) {
   await Promise.all(promises);
 }
 
-export async function updatePrepEntry(
-  docId: string,
-  data: {
-    fridge_duration_days?: number | null;
-    freezable?: boolean | null;
-    freeze_duration_days?: number | null;
-  }
-) {
+interface PrepEntryUpdate {
+  fridge_duration_days?: number | null;
+  freezable?: boolean | null;
+  freeze_duration_days?: number | null;
+}
+
+export async function updatePrepEntry(docId: string, data: PrepEntryUpdate): Promise<void> {
   await updateDoc(doc(db, "prep_catalog", docId), {
     ...data,
     updated_at: serverTimestamp(),

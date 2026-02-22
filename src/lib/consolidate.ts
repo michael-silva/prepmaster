@@ -65,82 +65,94 @@ function resolveUnit(unit: string | null): UnitDef | null {
   return UNIT_MAP[normalizeUnit(unit)] ?? null;
 }
 
-function tryConsolidateGroup(entries: ConsolidatedEntry[]): {
+interface ConsolidationResult {
   isCompatible: boolean;
   totalQuantity: number | null;
   totalUnit: string | null;
   mergedEntries: ConsolidatedEntry[];
-} {
+}
+
+function mergeAllDocIds(entries: ConsolidatedEntry[]): string[] {
+  return entries.flatMap((e) => e.docIds);
+}
+
+function consolidateAllNull(entries: ConsolidatedEntry[]): ConsolidationResult {
+  return {
+    isCompatible: true,
+    totalQuantity: null,
+    totalUnit: null,
+    mergedEntries: [{ quantity: null, unit: null, docIds: mergeAllDocIds(entries) }],
+  };
+}
+
+function consolidateMetricUnits(
+  entries: ConsolidatedEntry[],
+  unitDefs: { entry: ConsolidatedEntry; def: UnitDef }[]
+): ConsolidationResult {
+  let baseSum = 0;
+  for (const { entry, def } of unitDefs) {
+    baseSum += (entry.quantity ?? 0) * def.toBase;
+  }
+  const { quantity, unit } = formatBaseValue(baseSum, unitDefs[0].def.family);
+  return {
+    isCompatible: true,
+    totalQuantity: quantity,
+    totalUnit: unit,
+    mergedEntries: [{ quantity, unit, docIds: mergeAllDocIds(entries) }],
+  };
+}
+
+function consolidateRawUnits(
+  entries: ConsolidatedEntry[],
+  withQty: ConsolidatedEntry[]
+): ConsolidationResult {
+  let sum = 0;
+  for (const e of withQty) {
+    sum += e.quantity ?? 0;
+  }
+  const roundedSum = parseFloat(sum.toFixed(2));
+  return {
+    isCompatible: true,
+    totalQuantity: roundedSum,
+    totalUnit: withQty[0].unit,
+    mergedEntries: [{ quantity: roundedSum, unit: withQty[0].unit, docIds: mergeAllDocIds(entries) }],
+  };
+}
+
+const INCOMPATIBLE_RESULT: Omit<ConsolidationResult, "mergedEntries"> = {
+  isCompatible: false,
+  totalQuantity: null,
+  totalUnit: null,
+};
+
+function tryConsolidateGroup(entries: ConsolidatedEntry[]): ConsolidationResult {
   if (entries.length === 1) {
     const e = entries[0];
-    return {
-      isCompatible: true,
-      totalQuantity: e.quantity,
-      totalUnit: e.unit,
-      mergedEntries: entries,
-    };
+    return { isCompatible: true, totalQuantity: e.quantity, totalUnit: e.unit, mergedEntries: entries };
   }
 
-  const allNull = entries.every((e) => e.quantity == null);
-  if (allNull) {
-    const merged: ConsolidatedEntry = {
-      quantity: null,
-      unit: null,
-      docIds: entries.flatMap((e) => e.docIds),
-    };
-    return { isCompatible: true, totalQuantity: null, totalUnit: null, mergedEntries: [merged] };
+  if (entries.every((e) => e.quantity == null)) {
+    return consolidateAllNull(entries);
   }
 
   const withQty = entries.filter((e) => e.quantity != null);
-  const withoutQty = entries.filter((e) => e.quantity == null);
+  const hasEntriesWithoutQty = entries.some((e) => e.quantity == null);
 
   const unitDefs = withQty.map((e) => ({ entry: e, def: resolveUnit(e.unit) }));
-
   const families = new Set(
-    unitDefs.map((u) => {
-      if (u.def) return `metric:${u.def.family}`;
-      return `raw:${normalizeUnit(u.entry.unit ?? "")}`;
-    })
+    unitDefs.map((u) => u.def ? `metric:${u.def.family}` : `raw:${normalizeUnit(u.entry.unit ?? "")}`)
   );
 
-  if (families.size === 1 && withoutQty.length === 0) {
-    const first = unitDefs[0];
-
-    if (first.def) {
-      let baseSum = 0;
-      for (const { entry, def } of unitDefs) {
-        baseSum += (entry.quantity ?? 0) * def!.toBase;
-      }
-      const { quantity, unit } = formatBaseValue(baseSum, first.def.family);
-      const allDocIds = entries.flatMap((e) => e.docIds);
-      return {
-        isCompatible: true,
-        totalQuantity: quantity,
-        totalUnit: unit,
-        mergedEntries: [{ quantity, unit, docIds: allDocIds }],
-      };
-    }
-
-    let sum = 0;
-    for (const e of withQty) {
-      sum += e.quantity!;
-    }
-    const allDocIds = entries.flatMap((e) => e.docIds);
-    const roundedSum = parseFloat(sum.toFixed(2));
-    return {
-      isCompatible: true,
-      totalQuantity: roundedSum,
-      totalUnit: withQty[0].unit,
-      mergedEntries: [{ quantity: roundedSum, unit: withQty[0].unit, docIds: allDocIds }],
-    };
+  if (families.size !== 1 || hasEntriesWithoutQty) {
+    return { ...INCOMPATIBLE_RESULT, mergedEntries: entries };
   }
 
-  return {
-    isCompatible: false,
-    totalQuantity: null,
-    totalUnit: null,
-    mergedEntries: entries,
-  };
+  const allMetric = unitDefs.every((u) => u.def !== null);
+  if (allMetric) {
+    return consolidateMetricUnits(entries, unitDefs as { entry: ConsolidatedEntry; def: UnitDef }[]);
+  }
+
+  return consolidateRawUnits(entries, withQty);
 }
 
 export function consolidateItems(items: ShoppingItem[]): ConsolidatedItem[] {

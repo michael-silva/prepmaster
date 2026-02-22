@@ -30,19 +30,17 @@ export function EditRecipePage({ user }: EditRecipePageProps) {
       return;
     }
 
-    (async () => {
+    async function loadRecipe(recipeId: string) {
       try {
-        const snap = await getDoc(doc(db, "recipes", id));
+        const snap = await getDoc(doc(db, "recipes", recipeId));
         if (!snap.exists()) {
           setError("Receita não encontrada.");
-          setLoading(false);
           return;
         }
 
         const data = snap.data();
         if (data.user_id !== user.uid) {
           setError("Você não tem permissão para editar esta receita.");
-          setLoading(false);
           return;
         }
 
@@ -61,7 +59,9 @@ export function EditRecipePage({ user }: EditRecipePageProps) {
       } finally {
         setLoading(false);
       }
-    })();
+    }
+
+    loadRecipe(id);
   }, [id, user.uid]);
 
   async function handleSave(data: RecipeFormData) {

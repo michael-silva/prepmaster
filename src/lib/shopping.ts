@@ -17,7 +17,7 @@ export async function addRecipeToList(
   uid: string,
   recipeId: string,
   ingredients: RecipeIngredient[]
-) {
+): Promise<void> {
   const batch = writeBatch(db);
   const colRef = collection(db, "shopping_list");
 
@@ -40,7 +40,7 @@ export async function addRecipeToList(
   await batch.commit();
 }
 
-export async function addManualItem(uid: string, itemName: string) {
+export async function addManualItem(uid: string, itemName: string): Promise<void> {
   await addDoc(collection(db, "shopping_list"), {
     user_id: uid,
     item: itemName,
@@ -55,7 +55,7 @@ export async function addManualItem(uid: string, itemName: string) {
   });
 }
 
-export async function toggleItem(docId: string, purchased: boolean) {
+export async function toggleItem(docId: string, purchased: boolean): Promise<void> {
   await updateDoc(doc(db, "shopping_list", docId), {
     purchased,
     purchased_at: purchased ? serverTimestamp() : null,
@@ -63,11 +63,11 @@ export async function toggleItem(docId: string, purchased: boolean) {
   });
 }
 
-export async function removeItem(docId: string) {
+export async function removeItem(docId: string): Promise<void> {
   await deleteDoc(doc(db, "shopping_list", docId));
 }
 
-export async function toggleItems(docIds: string[], purchased: boolean) {
+export async function toggleItems(docIds: string[], purchased: boolean): Promise<void> {
   const batch = writeBatch(db);
   for (const id of docIds) {
     batch.update(doc(db, "shopping_list", id), {
@@ -79,7 +79,7 @@ export async function toggleItems(docIds: string[], purchased: boolean) {
   await batch.commit();
 }
 
-export async function removeItems(docIds: string[]) {
+export async function removeItems(docIds: string[]): Promise<void> {
   const batch = writeBatch(db);
   for (const id of docIds) {
     batch.delete(doc(db, "shopping_list", id));
@@ -87,7 +87,7 @@ export async function removeItems(docIds: string[]) {
   await batch.commit();
 }
 
-export async function clearPurchased(uid: string) {
+export async function clearPurchased(uid: string): Promise<void> {
   const q = query(
     collection(db, "shopping_list"),
     where("user_id", "==", uid),

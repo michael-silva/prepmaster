@@ -36,7 +36,12 @@ export function RecipeList({ recipes, loading, user }: RecipeListProps) {
   );
 }
 
-function RecipeCard({ recipe, uid }: { recipe: StoredRecipe; uid?: string }) {
+interface RecipeCardProps {
+  recipe: StoredRecipe;
+  uid?: string;
+}
+
+function RecipeCard({ recipe, uid }: RecipeCardProps) {
   const addToast = useToastStore((s) => s.addToast);
 
   async function handleAddToList() {

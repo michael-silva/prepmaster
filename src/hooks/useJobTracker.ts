@@ -84,10 +84,10 @@ async function handleJobRemoved(
     const data = snap.data();
 
     if (data.status === "completed") {
-      const title = data.recipe_title || "Receita";
+      const title = data.recipe_title ?? "Receita";
       addToast(`${title} importada com sucesso!`, "success");
     } else if (data.status === "failed") {
-      addToast(data.error || "Extração falhou.", "error");
+      addToast(data.error ?? "Extração falhou.", "error");
     }
     markNotified(jobId);
   } catch {
@@ -117,7 +117,7 @@ async function checkMissedJobs(
     const snap = await getDocs(missedQuery);
     snap.docs.forEach((d) => {
       const data = d.data();
-      const title = data.recipe_title || "Receita";
+      const title = data.recipe_title ?? "Receita";
       addToast(`${title} importada enquanto você estava fora!`, "success");
       markNotified(d.id);
     });

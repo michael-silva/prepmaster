@@ -40,7 +40,7 @@ export async function createRecipe(uid: string, data: RecipeData): Promise<strin
   return docRef.id;
 }
 
-export async function updateRecipe(recipeId: string, data: Partial<RecipeData>) {
+export async function updateRecipe(recipeId: string, data: Partial<RecipeData>): Promise<void> {
   const updates: UpdateData<DocumentData> = { updated_at: serverTimestamp() };
 
   if (data.title !== undefined) updates.title = data.title;
@@ -55,6 +55,6 @@ export async function updateRecipe(recipeId: string, data: Partial<RecipeData>) 
   await updateDoc(doc(db, "recipes", recipeId), updates);
 }
 
-export async function deleteRecipe(recipeId: string) {
+export async function deleteRecipe(recipeId: string): Promise<void> {
   await deleteDoc(doc(db, "recipes", recipeId));
 }
