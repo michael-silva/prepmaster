@@ -300,6 +300,8 @@ export default async function handler(
       status: "completed",
       completed_at: new Date(),
       recipe_id: recipeRef.id,
+      recipe_title: recipe.title,
+      notified_at: null,
     });
 
     jlog.info("completed", { recipeId: recipeRef.id, title: recipe.title });
@@ -313,7 +315,7 @@ export default async function handler(
 
     if (isRateLimit) {
       try {
-        await jobRef.update({ status: "failed", error: errorMessage });
+        await jobRef.update({ status: "failed", error: errorMessage, notified_at: null });
       } catch (updateErr) {
         jlog.error("failed to update job status", updateErr);
       }
@@ -327,6 +329,7 @@ export default async function handler(
         completed_at: new Date(),
         error: errorMessage,
         permanent: isPermanent,
+        notified_at: null,
       });
     } catch (updateErr) {
       jlog.error("failed to update job status", updateErr);

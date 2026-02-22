@@ -1,65 +1,82 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "firebase/auth";
-import {
-  importRecipe,
-  pollJobStatus,
-  type JobStatusResponse,
-  type Recipe,
-} from "@/lib/api";
+import { doc, onSnapshot, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { importRecipe, type Recipe } from "@/lib/api";
 
 interface NewRecipePageProps {
   user: User;
 }
 
-type Phase = "form" | "polling" | "done" | "error";
+type Phase = "form" | "watching" | "done" | "error";
 
 export function NewRecipePage({ user }: NewRecipePageProps) {
   const [url, setUrl] = useState("");
   const [phase, setPhase] = useState<Phase>("form");
-  const [jobStatus, setJobStatus] = useState<JobStatusResponse | null>(null);
+  const [jobStatus, setJobStatus] = useState<string>("pending");
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const stopPolling = useRef<(() => void) | null>(null);
+  const [permanent, setPermanent] = useState(false);
+  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const getToken = useCallback(() => user.getIdToken(), [user]);
 
   useEffect(() => {
-    return () => stopPolling.current?.();
+    return () => unsubscribeRef.current?.();
   }, []);
+
+  function watchJob(jobId: string) {
+    unsubscribeRef.current?.();
+
+    const jobRef = doc(db, "jobs", jobId);
+    unsubscribeRef.current = onSnapshot(jobRef, async (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+
+      setJobStatus(data.status);
+
+      if (data.status === "completed" && data.recipe_id) {
+        unsubscribeRef.current?.();
+        try {
+          const recipeSnap = await getDoc(doc(db, "recipes", data.recipe_id));
+          if (recipeSnap.exists()) {
+            const r = recipeSnap.data() as Recipe;
+            setRecipe(r);
+            setPhase("done");
+          }
+        } catch {
+          setRecipe({
+            title: data.recipe_title || "Receita importada",
+            source_url: data.url,
+            ingredients: [],
+            steps: [],
+          });
+          setPhase("done");
+        }
+      } else if (data.status === "failed") {
+        unsubscribeRef.current?.();
+        setError(data.error ?? "Extração falhou.");
+        setPermanent(!!data.permanent);
+        setPhase("error");
+      }
+    });
+  }
 
   async function handleImport() {
     const trimmed = url.trim();
     if (!trimmed) return;
 
-    setPhase("polling");
+    setPhase("watching");
     setError(null);
     setRecipe(null);
-    setJobStatus(null);
+    setJobStatus("pending");
+    setPermanent(false);
 
     try {
       const token = await getToken();
       const { jobId } = await importRecipe(trimmed, token);
-
-      stopPolling.current?.();
-      stopPolling.current = pollJobStatus(
-        jobId,
-        getToken,
-        (data) => {
-          setJobStatus(data);
-          if (data.status === "completed" && data.recipe) {
-            setRecipe(data.recipe);
-            setPhase("done");
-          } else if (data.status === "failed") {
-            setError(data.error ?? "Extração falhou.");
-            setPhase("error");
-          }
-        },
-        (err) => {
-          setError(err.message);
-          setPhase("error");
-        }
-      );
+      watchJob(jobId);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao importar.");
       setPhase("error");
@@ -67,12 +84,13 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
   }
 
   function handleReset() {
-    stopPolling.current?.();
+    unsubscribeRef.current?.();
     setPhase("form");
     setUrl("");
     setError(null);
     setRecipe(null);
-    setJobStatus(null);
+    setJobStatus("pending");
+    setPermanent(false);
   }
 
   return (
@@ -88,14 +106,14 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
         <ImportForm url={url} setUrl={setUrl} onImport={handleImport} />
       )}
 
-      {phase === "polling" && (
-        <PollingIndicator status={jobStatus?.status ?? "pending"} />
+      {phase === "watching" && (
+        <WatchingIndicator status={jobStatus} />
       )}
 
       {phase === "error" && (
         <ErrorCard
           message={error!}
-          permanent={jobStatus?.permanent}
+          permanent={permanent}
           onRetry={handleReset}
         />
       )}
@@ -136,7 +154,7 @@ function ImportForm({
   );
 }
 
-function PollingIndicator({ status }: { status: string }) {
+function WatchingIndicator({ status }: { status: string }) {
   const labels: Record<string, string> = {
     pending: "Na fila...",
     processing: "Extraindo receita com IA...",
