@@ -1,12 +1,11 @@
 import { config } from "dotenv";
 import path from "path";
+import admin from "firebase-admin";
+import type { app, auth, firestore } from "firebase-admin";
 
-// Carrega .env.local localmente (vercel dev usa variáveis do dashboard por padrão)
 config({ path: path.resolve(process.cwd(), ".env.local") });
 
-import admin from "firebase-admin";
-
-function getApp() {
+function getApp(): app.App {
   if (admin.apps.length > 0) {
     return admin.app();
   }
@@ -36,11 +35,11 @@ function getApp() {
   });
 }
 
-export function getAuth() {
+export function getAuth(): auth.Auth {
   return getApp().auth();
 }
 
-export function getFirestore() {
+export function getFirestore(): firestore.Firestore {
   getApp();
   return admin.firestore();
 }

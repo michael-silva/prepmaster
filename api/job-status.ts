@@ -1,7 +1,18 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
-import { getAuth, getFirestore } from "./lib/firebase-admin.js";
+import { getFirestore } from "./lib/firebase-admin.js";
 import { createLogger } from "./lib/logger.js";
 import { handleCorsPreflightOrMethod } from "./lib/cors.js";
+import { verifyAuth } from "./lib/auth.js";
+
+interface JobStatusResponse {
+  jobId: string;
+  status: string;
+  url: string;
+  created_at: unknown;
+  error?: string;
+  permanent?: boolean;
+  recipe?: Record<string, unknown>;
+}
 
 export default async function handler(
   req: VercelRequest,
@@ -11,17 +22,10 @@ export default async function handler(
 
   const log = createLogger({ fn: "job-status" });
 
+  const userId = await verifyAuth(req, res);
+  if (!userId) return;
+
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader?.startsWith("Bearer ")) {
-      res.status(401).json({ error: "Missing or invalid Authorization header" });
-      return;
-    }
-
-    const idToken = authHeader.slice(7);
-    const decoded = await getAuth().verifyIdToken(idToken);
-    const userId = decoded.uid;
-
     const jobId = req.query.jobId;
     if (!jobId || typeof jobId !== "string") {
       res.status(400).json({ error: "Missing or invalid jobId query parameter" });
@@ -36,14 +40,18 @@ export default async function handler(
       return;
     }
 
-    const job = jobSnap.data()!;
+    const job = jobSnap.data();
+    if (!job) {
+      res.status(404).json({ error: "Job not found" });
+      return;
+    }
 
     if (job.user_id !== userId) {
       res.status(403).json({ error: "Forbidden" });
       return;
     }
 
-    const response: Record<string, unknown> = {
+    const response: JobStatusResponse = {
       jobId,
       status: job.status,
       url: job.url,
@@ -53,25 +61,18 @@ export default async function handler(
     if (job.status === "failed") {
       response.error = job.error ?? "Unknown error";
       response.permanent = job.permanent ?? false;
-      res.status(200).json(response);
-      return;
     }
 
     if (job.status === "completed" && job.recipe_id) {
       const recipeSnap = await db.collection("recipes").doc(job.recipe_id).get();
       if (recipeSnap.exists) {
-        response.recipe = recipeSnap.data();
+        response.recipe = recipeSnap.data() as Record<string, unknown>;
       }
     }
 
     res.status(200).json(response);
   } catch (err) {
     log.error("handler failed", err);
-    const msg = err instanceof Error ? err.message : "";
-    if (msg.includes("auth") || msg.includes("token") || msg.includes("id-token")) {
-      res.status(401).json({ error: "Invalid or expired token" });
-      return;
-    }
     res.status(500).json({ error: "Internal server error" });
   }
 }

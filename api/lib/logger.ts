@@ -35,7 +35,14 @@ function formatEntry(level: LogLevel, ctx: LogContext, message: string, extra?: 
   return JSON.stringify(base);
 }
 
-export function createLogger(ctx: LogContext) {
+export interface Logger {
+  info: (msg: string, extra?: unknown) => void;
+  warn: (msg: string, extra?: unknown) => void;
+  error: (msg: string, extra?: unknown) => void;
+  child: (overrides: Partial<LogContext>) => Logger;
+}
+
+export function createLogger(ctx: LogContext): Logger {
   return {
     info: (msg: string, extra?: unknown) => console.log(formatEntry("info", ctx, msg, extra)),
     warn: (msg: string, extra?: unknown) => console.warn(formatEntry("warn", ctx, msg, extra)),

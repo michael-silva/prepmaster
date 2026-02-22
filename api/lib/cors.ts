@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
+const CORS_MAX_AGE_SECONDS = 86400;
+
 const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
@@ -29,7 +31,7 @@ export function setCorsHeaders(
   }
   res.setHeader("Access-Control-Allow-Methods", methods);
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Max-Age", "86400");
+  res.setHeader("Access-Control-Max-Age", String(CORS_MAX_AGE_SECONDS));
 }
 
 export function handleCorsPreflightOrMethod(
