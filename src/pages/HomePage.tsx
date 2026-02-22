@@ -84,21 +84,39 @@ export function HomePage({ user, activeJobs }: HomePageProps) {
         <p style={{ color: "var(--color-muted)", marginBottom: "1rem" }}>
           Sua sessão está ativa. Importe receitas por URL e planeje sua semana.
         </p>
-        <Link
-          to="/nova-receita"
-          style={{
-            display: "inline-block",
-            padding: "0.75rem 1.25rem",
-            fontSize: "0.95rem",
-            fontWeight: 600,
-            background: "var(--color-accent)",
-            color: "var(--color-bg)",
-            borderRadius: "10px",
-            textDecoration: "none",
-          }}
-        >
-          Nova Receita
-        </Link>
+        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+          <Link
+            to="/nova-receita"
+            style={{
+              display: "inline-block",
+              padding: "0.75rem 1.25rem",
+              fontSize: "0.95rem",
+              fontWeight: 600,
+              background: "var(--color-accent)",
+              color: "var(--color-bg)",
+              borderRadius: "10px",
+              textDecoration: "none",
+            }}
+          >
+            Nova Receita
+          </Link>
+          <Link
+            to="/lista-de-compras"
+            style={{
+              display: "inline-block",
+              padding: "0.75rem 1.25rem",
+              fontSize: "0.95rem",
+              fontWeight: 600,
+              background: "transparent",
+              color: "var(--color-accent)",
+              border: "1px solid var(--color-accent)",
+              borderRadius: "10px",
+              textDecoration: "none",
+            }}
+          >
+            Lista de Compras
+          </Link>
+        </div>
       </section>
 
       {activeJobs.length > 0 && <ActiveJobsBanner jobs={activeJobs} />}
@@ -107,7 +125,7 @@ export function HomePage({ user, activeJobs }: HomePageProps) {
         <h2 style={{ fontSize: "1.15rem", fontWeight: 600, marginBottom: "0.75rem" }}>
           Minhas Receitas
         </h2>
-        <RecipeList recipes={recipes} loading={loading} />
+        <RecipeList recipes={recipes} loading={loading} user={user} />
       </section>
 
       <InstallHint />

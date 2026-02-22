@@ -75,8 +75,22 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
 
     try {
       const token = await getToken();
-      const { jobId } = await importRecipe(trimmed, token);
-      watchJob(jobId);
+      const result = await importRecipe(trimmed, token);
+
+      if (result.forked && result.recipeId) {
+        const recipeSnap = await getDoc(doc(db, "recipes", result.recipeId));
+        if (recipeSnap.exists()) {
+          setRecipe(recipeSnap.data() as Recipe);
+        } else {
+          setRecipe({ title: "Receita importada", source_url: trimmed, ingredients: [], steps: [] });
+        }
+        setPhase("done");
+        return;
+      }
+
+      if (result.jobId) {
+        watchJob(result.jobId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao importar.");
       setPhase("error");
@@ -103,7 +117,13 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
       </div>
 
       {phase === "form" && (
-        <ImportForm url={url} setUrl={setUrl} onImport={handleImport} />
+        <>
+          <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
+            <span style={activeTabStyle}>Importar URL</span>
+            <Link to="/criar-receita" style={inactiveTabStyle}>Criar Manualmente</Link>
+          </div>
+          <ImportForm url={url} setUrl={setUrl} onImport={handleImport} />
+        </>
       )}
 
       {phase === "watching" && (
@@ -334,4 +354,25 @@ const spinnerStyle: React.CSSProperties = {
   borderTopColor: "var(--color-accent)",
   borderRadius: "50%",
   animation: "spin 0.8s linear infinite",
+};
+
+const activeTabStyle: React.CSSProperties = {
+  padding: "0.5rem 1rem",
+  fontSize: "0.9rem",
+  fontWeight: 600,
+  background: "var(--color-accent)",
+  color: "var(--color-bg)",
+  borderRadius: "8px",
+  textDecoration: "none",
+};
+
+const inactiveTabStyle: React.CSSProperties = {
+  padding: "0.5rem 1rem",
+  fontSize: "0.9rem",
+  fontWeight: 500,
+  background: "transparent",
+  color: "var(--color-muted)",
+  border: "1px solid rgba(124, 184, 130, 0.3)",
+  borderRadius: "8px",
+  textDecoration: "none",
 };

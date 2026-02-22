@@ -64,6 +64,29 @@ export default async function handler(
       return;
     }
 
+    const existingRecipe = await db
+      .collection("recipes")
+      .where("source_url", "==", url)
+      .limit(1)
+      .get();
+
+    if (!existingRecipe.empty) {
+      const source = existingRecipe.docs[0];
+      const srcData = source.data();
+      const forkRef = db.collection("recipes").doc();
+      const { user_id: _srcUid, forked_from: _srcFork, created_at: _srcCreated, updated_at: _srcUpdated, ...recipeFields } = srcData;
+      await forkRef.set({
+        ...recipeFields,
+        user_id: userId,
+        forked_from: source.id,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+      log.info("forked existing recipe", { sourceId: source.id, forkId: forkRef.id, userId, url });
+      res.status(200).json({ recipeId: forkRef.id, forked: true });
+      return;
+    }
+
     const jobRef = db.collection("jobs").doc();
     const jobId = jobRef.id;
 

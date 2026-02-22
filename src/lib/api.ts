@@ -33,10 +33,17 @@ export interface Recipe {
   mise_en_place?: MiseEnPlace[];
 }
 
+export interface ImportRecipeResult {
+  jobId?: string;
+  recipeId?: string;
+  forked?: boolean;
+  deduplicated?: boolean;
+}
+
 export async function importRecipe(
   url: string,
   idToken: string
-): Promise<{ jobId: string }> {
+): Promise<ImportRecipeResult> {
   const base = getApiBase();
   const res = await fetch(`${base}/api/import-recipe`, {
     method: "POST",
@@ -54,6 +61,6 @@ export async function importRecipe(
     throw new Error(message);
   }
 
-  const data = (await res.json()) as { jobId: string };
+  const data = (await res.json()) as ImportRecipeResult;
   return data;
 }
