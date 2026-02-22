@@ -6,6 +6,50 @@ import { addManualItem, toggleItems, removeItems, clearPurchased } from "@/lib/s
 import { useToastStore } from "@/stores/toastStore";
 import { formatConsolidatedLabel, type ConsolidatedItem } from "@/lib/consolidate";
 
+const AISLE_CONFIG: Record<string, { emoji: string; order: number }> = {
+  Hortifruti:  { emoji: "🥬", order: 1 },
+  "Açougue":   { emoji: "🥩", order: 2 },
+  Frios:       { emoji: "🧀", order: 3 },
+  "Laticínios": { emoji: "🥛", order: 4 },
+  Padaria:     { emoji: "🍞", order: 5 },
+  Congelados:  { emoji: "🧊", order: 6 },
+  Bebidas:     { emoji: "🥤", order: 7 },
+  Mercearia:   { emoji: "🏪", order: 8 },
+  Higiene:     { emoji: "🧴", order: 9 },
+  Outros:      { emoji: "📦", order: 10 },
+};
+
+interface AisleGroup {
+  aisle: string;
+  emoji: string;
+  items: ConsolidatedItem[];
+}
+
+function groupByAisle(items: ConsolidatedItem[]): AisleGroup[] {
+  const groups = new Map<string, ConsolidatedItem[]>();
+
+  for (const item of items) {
+    const aisle = item.aisle || "Outros";
+    const list = groups.get(aisle);
+    if (list) {
+      list.push(item);
+    } else {
+      groups.set(aisle, [item]);
+    }
+  }
+
+  return Array.from(groups.entries())
+    .map(([aisle, grouped]) => ({
+      aisle,
+      emoji: AISLE_CONFIG[aisle]?.emoji ?? "📦",
+      items: grouped,
+    }))
+    .sort(
+      (a, b) =>
+        (AISLE_CONFIG[a.aisle]?.order ?? 99) - (AISLE_CONFIG[b.aisle]?.order ?? 99)
+    );
+}
+
 interface ShoppingListPageProps {
   user: User;
 }
@@ -18,6 +62,7 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
   const pending = consolidated.filter((c) => !c.purchased);
   const purchased = consolidated.filter((c) => c.purchased);
   const purchasedRawCount = items.filter((i) => i.purchased).length;
+  const aisleGroups = groupByAisle(pending);
 
   async function handleAdd() {
     const trimmed = newItem.trim();
@@ -101,10 +146,15 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
         </section>
       )}
 
-      {pending.length > 0 && (
-        <section style={{ marginBottom: "1.25rem" }}>
+      {aisleGroups.map((group) => (
+        <section key={group.aisle} style={{ marginBottom: "1.25rem" }}>
+          <div style={aisleHeaderStyle}>
+            <span style={{ fontSize: "1.1rem" }}>{group.emoji}</span>
+            <span style={{ fontWeight: 600, fontSize: "0.9rem" }}>{group.aisle}</span>
+            <span style={aisleCountStyle}>{group.items.length}</span>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
-            {pending.map((item) => (
+            {group.items.map((item) => (
               <ItemRow
                 key={item.key}
                 item={item}
@@ -114,7 +164,7 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
             ))}
           </div>
         </section>
-      )}
+      ))}
 
       {purchased.length > 0 && (
         <section>
@@ -233,6 +283,23 @@ const addBtnStyle = (disabled: boolean): React.CSSProperties => ({
   opacity: disabled ? 0.5 : 1,
   flexShrink: 0,
 });
+
+const aisleHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "0.5rem",
+  padding: "0.6rem 0.25rem",
+  color: "var(--color-text)",
+};
+
+const aisleCountStyle: React.CSSProperties = {
+  fontSize: "0.75rem",
+  color: "var(--color-muted)",
+  background: "rgba(124, 184, 130, 0.15)",
+  borderRadius: "10px",
+  padding: "1px 7px",
+  fontWeight: 500,
+};
 
 const rowStyle: React.CSSProperties = {
   display: "flex",

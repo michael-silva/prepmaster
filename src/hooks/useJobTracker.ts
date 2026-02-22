@@ -63,13 +63,13 @@ export function useJobTracker(user: User | null) {
     });
 
     return () => unsubscribe();
-  }, [user, addToast]);
+  }, [user?.uid, addToast]);
 
   useEffect(() => {
     if (!user || missedCheckDone.current) return;
     missedCheckDone.current = true;
     checkMissedJobs(user.uid, addToast);
-  }, [user, addToast]);
+  }, [user?.uid, addToast]);
 
   return { activeJobs };
 }

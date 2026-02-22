@@ -1,0 +1,54 @@
+---
+description: Padrões de qualidade para Vercel Serverless Functions e Node.js
+globs: "**/api/**/*.ts"
+alwaysApply: false
+---
+
+# API & Serverless Quality
+
+## Estrutura do Handler
+- Guard clauses primeiro: método HTTP, autenticação, validação do body.
+- Cada guard retorna imediatamente com status code e mensagem claros.
+- Lógica de negócio depois de todas as validações.
+
+```typescript
+export default async function handler(req: VercelRequest, res: VercelResponse): Promise<void> {
+  if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
+  // auth guard → body validation guard → business logic
+}
+```
+
+## Validação de Input
+- Validar **todos** os campos obrigatórios do body com mensagens de erro específicas.
+- Nunca confiar em dados do cliente — sempre re-validar server-side.
+- Tipar o body parsed com interface e validar antes de usar.
+
+## Segurança
+- Webhooks QStash: sempre verificar assinatura via `Receiver.verify()` antes de processar.
+- API routes: sempre validar Bearer token via Firebase Admin `auth().verifyIdToken()`.
+- Nunca expor stack traces ou detalhes internos no response de erro ao cliente.
+- Variáveis sensíveis apenas via `process.env` — nunca hardcoded.
+
+## Error Handling
+- Distinguir erros por classe: `PermanentError` (não retriable) vs erro genérico (retriable pelo QStash).
+- PermanentError retorna **HTTP 200** para que o QStash não faça retry.
+- Erro retriable retorna **HTTP 500** para que o QStash re-enfileire.
+- Sempre persistir status de erro no Firestore para feedback ao cliente.
+- Logar com contexto estruturado: `{ jobId, userId, errorMessage, retryCount }`.
+
+## Performance & Limites
+- Resposta da API produtora em **< 2 segundos** (evitar 504 do Vercel).
+- Processamento pesado sempre assíncrono via QStash, nunca síncrono no handler da API.
+- Timeouts explícitos em fetch externo (AbortController, max 15s).
+- Idempotência: verificar se job já foi completado antes de reprocessar.
+
+## Padrão de Resposta
+- Sucesso: `{ success: true, ...data }` com status 200/201/202.
+- Erro cliente: `{ error: "mensagem legível" }` com status 400/401/405.
+- Erro servidor: `{ error: "mensagem legível" }` com status 500.
+- Nunca retornar objetos vazios ou sem campo `error`/`success`.
+
+## Logging
+- Logger estruturado com contexto (child loggers com `{ jobId, userId }`).
+- Log no início do processamento, em cada decisão relevante e no final (sucesso ou erro).
+- Nunca logar tokens, senhas ou dados pessoais sensíveis.

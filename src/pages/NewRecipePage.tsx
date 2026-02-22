@@ -1,9 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { User } from "firebase/auth";
 import { doc, onSnapshot, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { importRecipe, type Recipe } from "@/lib/api";
+import { RecipeForm, type RecipeFormData } from "@/components/RecipeForm";
+import { updateRecipe } from "@/lib/recipes";
+import { syncPrepCatalog } from "@/lib/prepCatalog";
+import { usePrepCatalog } from "@/hooks/usePrepCatalog";
+import { useToastStore } from "@/stores/toastStore";
 
 interface NewRecipePageProps {
   user: User;
@@ -16,9 +21,14 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
   const [phase, setPhase] = useState<Phase>("form");
   const [jobStatus, setJobStatus] = useState<string>("pending");
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [recipeId, setRecipeId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [permanent, setPermanent] = useState(false);
+  const [saving, setSaving] = useState(false);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+  const { entries: prepEntries } = usePrepCatalog(user);
+  const addToast = useToastStore((s) => s.addToast);
+  const navigate = useNavigate();
 
   const getToken = useCallback(() => user.getIdToken(), [user]);
 
@@ -38,11 +48,11 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
 
       if (data.status === "completed" && data.recipe_id) {
         unsubscribeRef.current?.();
+        setRecipeId(data.recipe_id);
         try {
           const recipeSnap = await getDoc(doc(db, "recipes", data.recipe_id));
           if (recipeSnap.exists()) {
-            const r = recipeSnap.data() as Recipe;
-            setRecipe(r);
+            setRecipe(recipeSnap.data() as Recipe);
             setPhase("done");
           }
         } catch {
@@ -70,6 +80,7 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
     setPhase("watching");
     setError(null);
     setRecipe(null);
+    setRecipeId(null);
     setJobStatus("pending");
     setPermanent(false);
 
@@ -78,6 +89,7 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
       const result = await importRecipe(trimmed, token);
 
       if (result.forked && result.recipeId) {
+        setRecipeId(result.recipeId);
         const recipeSnap = await getDoc(doc(db, "recipes", result.recipeId));
         if (recipeSnap.exists()) {
           setRecipe(recipeSnap.data() as Recipe);
@@ -97,12 +109,30 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
     }
   }
 
+  async function handleSave(data: RecipeFormData) {
+    if (!recipeId) return;
+    setSaving(true);
+    try {
+      await updateRecipe(recipeId, data);
+      if (data.mise_en_place.length > 0) {
+        await syncPrepCatalog(user.uid, data.mise_en_place);
+      }
+      addToast("Receita salva com sucesso!", "success");
+      navigate("/");
+    } catch {
+      addToast("Erro ao salvar receita.", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function handleReset() {
     unsubscribeRef.current?.();
     setPhase("form");
     setUrl("");
     setError(null);
     setRecipe(null);
+    setRecipeId(null);
     setJobStatus("pending");
     setPermanent(false);
   }
@@ -139,7 +169,31 @@ export function NewRecipePage({ user }: NewRecipePageProps) {
       )}
 
       {phase === "done" && recipe && (
-        <RecipeCard recipe={recipe} onNewRecipe={handleReset} />
+        <>
+          <div style={successBannerStyle}>
+            Receita extraída! Revise os dados abaixo e confirme.
+          </div>
+          <section style={cardStyle}>
+            <RecipeForm
+              initialData={{
+                title: recipe.title,
+                source_url: recipe.source_url,
+                servings: recipe.servings ?? null,
+                prep_time_minutes: recipe.prep_time_minutes ?? null,
+                cook_time_minutes: recipe.cook_time_minutes ?? null,
+                ingredients: recipe.ingredients,
+                steps: recipe.steps,
+                mise_en_place: recipe.mise_en_place ?? [],
+              }}
+              prepEntries={prepEntries}
+              onSave={handleSave}
+              saving={saving}
+            />
+          </section>
+          <button type="button" onClick={handleReset} style={secondaryBtnStyle}>
+            Importar outra receita
+          </button>
+        </>
       )}
     </main>
   );
@@ -232,82 +286,6 @@ function ErrorCard({
   );
 }
 
-function RecipeCard({ recipe, onNewRecipe }: { recipe: Recipe; onNewRecipe: () => void }) {
-  return (
-    <section style={cardStyle}>
-      <h2 style={{ fontSize: "1.35rem", fontWeight: 600, marginBottom: "0.25rem" }}>{recipe.title}</h2>
-
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", color: "var(--color-muted)", fontSize: "0.85rem", marginBottom: "1.25rem" }}>
-        {recipe.servings && <span>{recipe.servings} porções</span>}
-        {recipe.prep_time_minutes && <span>Preparo: {recipe.prep_time_minutes} min</span>}
-        {recipe.cook_time_minutes && <span>Cozimento: {recipe.cook_time_minutes} min</span>}
-      </div>
-
-      {recipe.ingredients.length > 0 && (
-        <div style={{ marginBottom: "1.25rem" }}>
-          <h3 style={sectionTitle}>Ingredientes</h3>
-          <ul style={{ margin: 0, paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-            {recipe.ingredients.map((ing, i) => (
-              <li key={i} style={{ fontSize: "0.95rem", lineHeight: 1.5 }}>
-                {ing.quantity != null && <strong>{ing.quantity} </strong>}
-                {ing.unit && <span>{ing.unit} </span>}
-                <span>{ing.item}</span>
-                {ing.aisle && (
-                  <span style={{ color: "var(--color-muted)", fontSize: "0.8rem", marginLeft: "0.5rem" }}>
-                    ({ing.aisle})
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {recipe.steps.length > 0 && (
-        <div style={{ marginBottom: "1.25rem" }}>
-          <h3 style={sectionTitle}>Modo de Preparo</h3>
-          <ol style={{ margin: 0, paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-            {recipe.steps.map((step) => (
-              <li key={step.order} style={{ fontSize: "0.95rem", lineHeight: 1.6 }}>
-                {step.instruction}
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {recipe.mise_en_place && recipe.mise_en_place.length > 0 && (
-        <div style={{ marginBottom: "1.25rem" }}>
-          <h3 style={sectionTitle}>Mise en Place</h3>
-          <ul style={{ margin: 0, paddingLeft: "1.25rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
-            {recipe.mise_en_place.map((m, i) => (
-              <li key={i} style={{ fontSize: "0.95rem", lineHeight: 1.5 }}>
-                <strong>{m.ingredient}</strong> — {m.technique}
-                {m.quantity && <span style={{ color: "var(--color-muted)" }}> ({m.quantity})</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {recipe.source_url && (
-        <a
-          href={recipe.source_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: "inline-block", color: "var(--color-accent)", fontSize: "0.85rem", marginBottom: "1.25rem" }}
-        >
-          Ver fonte original
-        </a>
-      )}
-
-      <button type="button" onClick={onNewRecipe} style={buttonStyle(false)}>
-        Importar outra receita
-      </button>
-    </section>
-  );
-}
-
 const cardStyle: React.CSSProperties = {
   background: "var(--color-surface)",
   borderRadius: "12px",
@@ -340,11 +318,28 @@ const buttonStyle = (disabled: boolean): React.CSSProperties => ({
   opacity: disabled ? 0.5 : 1,
 });
 
-const sectionTitle: React.CSSProperties = {
-  fontSize: "1rem",
-  fontWeight: 600,
-  marginBottom: "0.5rem",
-  color: "var(--color-accent)",
+const successBannerStyle: React.CSSProperties = {
+  padding: "0.875rem 1.25rem",
+  marginBottom: "1rem",
+  borderRadius: "10px",
+  background: "rgba(124, 184, 130, 0.12)",
+  border: "1px solid rgba(124, 184, 130, 0.3)",
+  color: "var(--color-text)",
+  fontSize: "0.95rem",
+  fontWeight: 500,
+};
+
+const secondaryBtnStyle: React.CSSProperties = {
+  width: "100%",
+  padding: "0.875rem 1.25rem",
+  fontSize: "0.95rem",
+  fontWeight: 500,
+  background: "transparent",
+  color: "var(--color-muted)",
+  border: "1px solid rgba(124, 184, 130, 0.3)",
+  borderRadius: "10px",
+  cursor: "pointer",
+  marginTop: "1rem",
 };
 
 const spinnerStyle: React.CSSProperties = {

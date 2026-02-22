@@ -1,0 +1,59 @@
+---
+description: Padrões de qualidade React — componentes, hooks e performance
+globs: "**/*.tsx"
+alwaysApply: false
+---
+
+# React Quality
+
+## Componentes
+- **Max 150 linhas** por componente. Extrair subcomponentes ou custom hooks ao ultrapassar.
+- Um componente por arquivo (subcomponentes auxiliares no mesmo arquivo são aceitos se < 30 linhas e uso exclusivo).
+- Props interface sempre nomeada e explícita. Nunca inline com `{ }` em componentes exportados.
+
+```tsx
+// ruim
+export function Card({ title, onClick }: { title: string; onClick: () => void }) {}
+
+// bom
+interface CardProps { title: string; onClick: () => void }
+export function Card({ title, onClick }: CardProps) {}
+```
+
+## Hooks — Regras Invioláveis
+- Hooks **sempre** no topo do componente, antes de qualquer early return.
+- **Nunca** hooks dentro de condicionais, loops ou funções aninhadas.
+- `useEffect` com cleanup para subscriptions (onSnapshot, event listeners, timers).
+- Dependency array completo — nunca ignorar `eslint-plugin-react-hooks/exhaustive-deps`.
+
+## Estado
+- Não armazenar em `useState` valores deriváveis de props ou outro estado. Calcular direto no render.
+- Agrupar estados relacionados em objeto quando sempre mudam juntos.
+
+```tsx
+// ruim — estado derivado
+const [fullName, setFullName] = useState('');
+useEffect(() => setFullName(`${first} ${last}`), [first, last]);
+
+// bom — cálculo direto
+const fullName = `${first} ${last}`;
+```
+
+## Performance
+- `useCallback` apenas para funções passadas como prop a componentes filhos memoizados.
+- `useMemo` apenas quando o cálculo é comprovadamente custoso (> 1ms) ou a referência importa.
+- **Nunca** criar objetos/arrays literais em JSX props — causa re-render desnecessário se filho usa `React.memo`.
+- Constantes de estilo (`CSSProperties`) fora do componente como `const` de módulo.
+
+## Patterns Obrigatórios
+- Loading/Empty/Error states tratados com early return antes do JSX principal.
+- Listas com `key` estável (id do documento, nunca index).
+- Eventos async em handlers: tratar erro com try/catch e feedback ao usuário via toast.
+- Formulários: disabled no botão durante submit, evitar double-submit.
+
+## Anti-Patterns Proibidos
+- `// eslint-disable` sem justificativa documentada.
+- `useEffect` como event handler (usar handler direto no evento).
+- `any` em props ou estado.
+- Re-fetch no `useEffect` do que já é fornecido via `onSnapshot`.
+- `dangerouslySetInnerHTML` sem sanitização.

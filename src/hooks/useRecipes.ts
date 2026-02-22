@@ -42,13 +42,14 @@ export function useRecipes(user: User | null) {
         setRecipes(items);
         setLoading(false);
       },
-      () => {
+      (error) => {
+        console.error("Recipes listener error:", error);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user?.uid]);
 
   return { recipes, loading };
 }

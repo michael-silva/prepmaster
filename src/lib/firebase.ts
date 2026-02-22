@@ -1,6 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+} from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,22 +17,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
-
 export const googleProvider = new GoogleAuthProvider();
 
-export async function enableOfflinePersistence() {
-  try {
-    await enableIndexedDbPersistence(db, {
-      forceOwnership: false,
-    });
-  } catch (err) {
-    if ((err as { code?: string }).code === "failed-precondition") {
-      console.warn(
-        "Persistência offline: múltiplas abas abertas. Apenas uma terá persistência ativa."
-      );
-    } else if ((err as { code?: string }).code === "unimplemented") {
-      console.warn("Persistência offline não suportada neste navegador.");
-    }
-  }
-}
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+});

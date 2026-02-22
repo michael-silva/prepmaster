@@ -49,13 +49,14 @@ export function useShoppingList(user: User | null) {
         setItems(result);
         setLoading(false);
       },
-      () => {
+      (error) => {
+        console.error("Shopping list listener error:", error);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user?.uid]);
 
   const consolidated: ConsolidatedItem[] = useMemo(
     () => consolidateItems(items),

@@ -35,13 +35,14 @@ export function usePrepCatalog(user: User | null) {
         setEntries(items);
         setLoading(false);
       },
-      () => {
+      (error) => {
+        console.error("Prep catalog listener error:", error);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [user]);
+  }, [user?.uid]);
 
   return { entries, loading };
 }

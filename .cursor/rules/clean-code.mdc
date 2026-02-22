@@ -1,0 +1,71 @@
+---
+description: Princípios de Clean Code — qualidade obrigatória em todo código gerado
+alwaysApply: true
+---
+
+# Clean Code
+
+## Funções
+- Max **20 linhas** por função. Se ultrapassar, extrair subfunções com nomes descritivos.
+- Uma função = uma responsabilidade. Se o nome exige "e" / "and", dividir.
+- Max **3 parâmetros**. Acima disso, agrupar em objeto tipado.
+
+```typescript
+// ruim
+function process(url: string, userId: string, retries: number, timeout: number, verbose: boolean) {}
+
+// bom
+interface ProcessOptions { url: string; userId: string; retries?: number; timeout?: number }
+function processJob(options: ProcessOptions) {}
+```
+
+## Nomenclatura
+- Variáveis/funções: **camelCase**, descritivas, sem abreviações crípticas (`usr` → `user`).
+- Booleanos com prefixo semântico: `isLoading`, `hasAccess`, `canRetry`.
+- Handlers com verbo de ação: `handleSubmit`, `onImport`, `watchJob`.
+- Constantes: **UPPER_SNAKE_CASE** (`MAX_CONTENT_CHARS`, `GEMINI_RPD_LIMIT`).
+
+## Princípios
+- **DRY**: Extrair lógica duplicada em funções/hooks/utilitários reutilizáveis.
+- **YAGNI**: Não implementar funcionalidade especulativa. Código só existe para resolver o requisito atual.
+- **Early Return**: Validações e guards no início, fluxo principal sem aninhamento.
+
+```typescript
+// ruim
+function process(data: Data | null) {
+  if (data) {
+    if (data.isValid) {
+      return doWork(data);
+    }
+  }
+  return null;
+}
+
+// bom
+function process(data: Data | null) {
+  if (!data || !data.isValid) return null;
+  return doWork(data);
+}
+```
+
+## Erros
+- **Nunca** `catch` vazio silencioso (exceto onde documentado com comentário justificando).
+- Erros com contexto: logar **o que** falhou, **onde**, e **o input** relevante.
+- Distinguir erros recuperáveis (retry) vs permanentes (abort) com classes de erro.
+
+## Comentários
+- Código deve ser autoexplicativo. Comentários apenas para **por quê**, nunca para **o quê**.
+- Nenhum código comentado (dead code). Usar git para histórico.
+- Nenhum TODO sem issue/ticket associado.
+
+## Magic Values
+- Zero magic numbers/strings inline. Extrair como constantes nomeadas.
+
+```typescript
+// ruim
+if (content.length < 100) throw new Error("Too short");
+
+// bom
+const MIN_EXTRACTABLE_CONTENT_LENGTH = 100;
+if (content.length < MIN_EXTRACTABLE_CONTENT_LENGTH) throw new Error("Too short");
+```

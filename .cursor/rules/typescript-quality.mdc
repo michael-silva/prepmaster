@@ -1,0 +1,70 @@
+---
+description: Padrões de qualidade TypeScript — type safety e boas práticas
+globs: "**/*.ts,**/*.tsx"
+alwaysApply: false
+---
+
+# TypeScript Quality
+
+## Type Safety Estrita
+- **Nunca** usar `any`. Usar `unknown` + type guard para dados externos.
+- **Nunca** usar `as` para forçar tipo (type assertion). Preferir narrowing com type guards.
+- Única exceção para `as`: dados de Firestore/API onde o schema é controlado por nós e validado.
+
+```typescript
+// ruim
+const data = JSON.parse(raw) as Recipe;
+
+// bom
+function isRecipe(data: unknown): data is Recipe {
+  return typeof data === 'object' && data !== null && 'title' in data && 'ingredients' in data;
+}
+const parsed: unknown = JSON.parse(raw);
+if (!isRecipe(parsed)) throw new Error('Invalid recipe data');
+```
+
+## Tipos Discriminados
+- Usar discriminated unions para estados mutuamente exclusivos.
+
+```typescript
+// ruim
+interface JobState { status: string; data?: Recipe; error?: string }
+
+// bom
+type JobState =
+  | { status: 'pending' }
+  | { status: 'processing' }
+  | { status: 'completed'; data: Recipe }
+  | { status: 'failed'; error: string; permanent: boolean };
+```
+
+## Interfaces e Types
+- `interface` para contratos de objetos (extensível). `type` para unions, intersections e aliases.
+- Exportar tipos usados entre módulos. Usar `import type` para imports apenas de tipo.
+- Props de componentes: sempre tipar explicitamente com `interface` nomeada.
+
+## Null Safety
+- Preferir `null` sobre `undefined` para valores intencionalmente vazios.
+- Usar optional chaining (`?.`) e nullish coalescing (`??`) — nunca `||` para defaults de valor falsy.
+
+```typescript
+// ruim — 0 e "" viram fallback
+const count = data.count || 10;
+
+// bom
+const count = data.count ?? 10;
+```
+
+## Funções
+- Tipar retorno explicitamente em funções públicas/exportadas.
+- Funções utilitárias puras: sem side effects, mesmo input → mesmo output.
+- Usar generics quando lógica se aplica a múltiplos tipos.
+
+## Enums e Constantes
+- Preferir `as const` objects sobre `enum` (melhor tree-shaking, mais flexível).
+
+```typescript
+// preferir
+const JOB_STATUS = { PENDING: 'pending', PROCESSING: 'processing', COMPLETED: 'completed', FAILED: 'failed' } as const;
+type JobStatus = typeof JOB_STATUS[keyof typeof JOB_STATUS];
+```
