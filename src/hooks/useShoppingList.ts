@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   collection,
   query,
@@ -8,6 +8,7 @@ import {
 } from "firebase/firestore";
 import type { User } from "firebase/auth";
 import { db } from "@/lib/firebase";
+import { consolidateItems, type ConsolidatedItem } from "@/lib/consolidate";
 
 export interface ShoppingItem {
   id: string;
@@ -56,5 +57,10 @@ export function useShoppingList(user: User | null) {
     return () => unsubscribe();
   }, [user]);
 
-  return { items, loading };
+  const consolidated: ConsolidatedItem[] = useMemo(
+    () => consolidateItems(items),
+    [items]
+  );
+
+  return { items, consolidated, loading };
 }

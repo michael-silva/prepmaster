@@ -50,30 +50,32 @@
 * **Entregável da Feature:** A lista de compras unifica automaticamente os ingredientes idênticos, somando volumes ou pesos convertidos (ex: unificando ml e litros). Em casos de incompatibilidade de unidades (ex: unidade vs xícara), o sistema exibe os itens agrupados de forma legível.
 * **Evolução Técnica:** Integração da lib `convert-units` ou algoritmo  executando via `reduce` no lado do cliente em menos de 50ms para garantir FPS estáveis.
 
-## 📦 Sprint 6: Ordenação por Corredor (Aisle Sorting)
+## 📦 Sprint 6: Ordenação por Corredor e Revisão Pré-Salvamento
 
-**Objetivo:** Acelerar o tempo de permanência no supermercado agrupando os itens visualmente.
+**Objetivo:** Acelerar o tempo de permanência no supermercado agrupando os itens visualmente e permitir que o usuário revise a receita extraída pela IA antes de salvar.
 
-* **Requisitos Atendidos:** RF08.
-* **Progresso Global:** 65%.
-* **Entregável da Feature:** Ao abrir a lista de compras, o usuário visualiza os itens categorizados em macro-categorias grandes, como "Hortifruti" e "Laticínios", sem precisar organizá-los manualmente.
-* **Evolução Técnica:** Utilizar `Array.prototype.groupBy()` baseado no atributo `aisle` que o LLM já definiu na Sprint 2. Criação do bloco de *fallback* "Outros" para itens desconhecidos.
+* **Requisitos Atendidos:** RF08, RF12.
+* **Progresso Global:** 60%.
+* **Entregável da Feature (RF08):** Ao abrir a lista de compras, o usuário visualiza os itens categorizados em macro-categorias grandes, como "Hortifruti" e "Laticínios", sem precisar organizá-los manualmente.
+* **Entregável da Feature (RF12):** Após a extração via IA, os dados retornados populam o formulário de receita (`RecipeForm`) em modo editável. O usuário pode ajustar título, ingredientes, passos e categorias antes de confirmar o salvamento. O botão "Salvar direto" também é oferecido para quem não quer editar.
+* **Evolução Técnica:** Utilizar `Array.prototype.groupBy()` baseado no atributo `aisle` que o LLM já definiu na Sprint 2. Criação do bloco de *fallback* "Outros" para itens desconhecidos. Refatorar o fluxo pós-extração em `NewRecipePage` para redirecionar ao `RecipeForm` pré-populado ao invés de exibir um card de leitura.
 
-## 📦 Sprint 7: Cardápio Semanal (Planner)
+## 📦 Sprint 7: Cardápio Semanal e Multiplicador de Porções
 
-**Objetivo:** Permitir a organização temporal das refeições.
+**Objetivo:** Permitir a organização temporal das refeições e o ajuste fino de quantidades ao gerar listas de compras.
 
-* **Requisitos Atendidos:** RF06.
-* **Progresso Global:** 75%.
-* **Entregável da Feature:** O usuário consegue arrastar receitas de um carrossel para dias da semana em um calendário e gerar uma lista de compras agregada a partir desses dias com apenas um botão.
-* **Evolução Técnica:** Integração com `@dnd-kit/core` para suportar *touch* e `date-fns` para lidar com datas. Lógica que injeta todos os insumos programados na coleção `shopping_list` e lida com agendamentos duplicados.
+* **Requisitos Atendidos:** RF06, RF14.
+* **Progresso Global:** 70%.
+* **Entregável da Feature (RF06):** O usuário consegue arrastar receitas de um carrossel para dias da semana em um calendário e gerar uma lista de compras agregada a partir desses dias com apenas um botão.
+* **Entregável da Feature (RF14):** Ao adicionar uma receita à lista de compras (seja do card da receita ou do Planner), o sistema exibe um seletor de multiplicador (1×, 2×, 3×... N×). As quantidades de cada ingrediente são multiplicadas proporcionalmente antes de serem injetadas na coleção `shopping_list`.
+* **Evolução Técnica:** Integração com `@dnd-kit/core` para suportar *touch* e `date-fns` para lidar com datas. Lógica que injeta todos os insumos programados na coleção `shopping_list` e lida com agendamentos duplicados. Refatorar `addRecipeToList` para receber um parâmetro `multiplier` e aplicar a multiplicação nas quantidades antes do `writeBatch`.
 
 ## 📦 Sprint 8: Gestão Transparente de Despensa
 
 **Objetivo:** Evitar redundância financeira nas compras através do controle de estoque permanente.
 
 * **Requisitos Atendidos:** RF09.
-* **Progresso Global:** 85%.
+* **Progresso Global:** 78%.
 * **Entregável da Feature:** O usuário pode marcar itens recorrentes como "Em Estoque" em sua despensa. Listas geradas subsequentemente omitem automaticamente esses itens, enviando-os para uma seção inferior expansível.
 * **Evolução Técnica:** Lógica de *diff* no front-end, cruzando a lista temporária de compras com os dados da coleção `pantry` (`status: true`) no momento de geração da lista.
 
@@ -82,7 +84,7 @@
 **Objetivo:** Validar a otimização algorítmica de tempo físico nas preparações prévias.
 
 * **Requisitos Atendidos:** RF10.
-* **Progresso Global:** 95%.
+* **Progresso Global:** 85%.
 * **Entregável da Feature:** Na aba "Preps de Domingo", o usuário visualiza uma lista consolidada de tarefas de pré-preparo (ex: cortar cebolas para três dias diferentes) e pode dar check nas tarefas, otimizando as horas da sua semana.
 * **Evolução Técnica:** *Map/Reduce* em dados previamente persistidos pelo RF06 e objetos `mise_en_place` extraídos no RF02. O agrupamento precisa ser lógico, considerando ingredientes e técnicas extraídas via prompt no backend.
 
@@ -91,15 +93,24 @@
 **Objetivo:** Melhorar a UX durante a execução física com as mãos ocupadas ou sujas.
 
 * **Requisitos Atendidos:** RF11.
-* **Progresso Global:** 100% (do MVP Core).
+* **Progresso Global:** 92% (do MVP Core).
 * **Entregável da Feature:** O usuário inicia a receita em uma interface de *stepper* tela cheia, sem distrações. A tela não apaga enquanto a funcionalidade estiver ativa.
 * **Evolução Técnica:** Integração da `Screen Wake Lock API`. Inclusão de blocos `try/catch` nativos e *fallback UI* (alertas gentis) para casos onde o SO (ex: iOS) bloqueia o wakelock por economia de energia.
+
+## 📦 Sprint 11: Organização em Listas de Receitas e Compartilhamento
+
+**Objetivo:** Permitir que o usuário organize seu livro de receitas em listas temáticas e compartilhe essas listas com outros usuários.
+
+* **Requisitos Atendidos:** RF13.
+* **Progresso Global:** 100%.
+* **Entregável da Feature:** O livro de receitas mantém a visão "Todas as Receitas" como padrão, mas o usuário pode criar listas temáticas (ex: "Fit", "Comfort Food", "Natal"). Cada receita pode pertencer a múltiplas listas. O usuário pode gerar um link de compartilhamento para uma lista; outros usuários que acessarem o link veem as receitas da lista e podem importá-las para seus próprios livros com um clique (via mecanismo de fork já existente).
+* **Evolução Técnica:** Nova coleção `recipe_lists` no Firestore com campos `user_id`, `name`, `recipe_ids[]` e `share_token` (UUID público). Página pública de visualização de lista compartilhada (sem exigir login para leitura). Regras de segurança do Firestore ajustadas para permitir leitura pública via `share_token` mas escrita restrita ao dono. Fork em lote dos itens selecionados pelo receptor.
 
 ---
 
 ## 📋 Auditoria Final de Requisitos
 
-Revisão de todos os requisitos originais solicitados para garantir 100% de cobertura ou justificar exclusões metodológicas:
+Revisão de todos os requisitos solicitados para garantir 100% de cobertura ou justificar exclusões metodológicas:
 
 * [x] **RF01:** Autenticação PWA - Entregue na Sprint 1.
 * [x] **RF02:** Extração Multimodal Assíncrona - Entregue na Sprint 2.
@@ -112,6 +123,9 @@ Revisão de todos os requisitos originais solicitados para garantir 100% de cobe
 * [x] **RF09:** Gestão Transparente de Despensa - Entregue na Sprint 8.
 * [x] **RF10:** Batch de Mise en Place - Entregue na Sprint 9.
 * [x] **RF11:** Modo "Cozinha Guiada" - Entregue na Sprint 10.
+* [x] **RF12:** Revisão Pré-Salvamento de Extração - Entregue na Sprint 6. Formulário editável pré-populado com os dados da IA antes de persistir.
+* [x] **RF13:** Organização em Listas de Receitas e Compartilhamento - Entregue na Sprint 11. Listas temáticas com links públicos de compartilhamento.
+* [x] **RF14:** Multiplicador de Porções na Lista de Compras - Entregue na Sprint 7. Seletor N× ao adicionar receita à lista.
 * [x] **Requisitos Não Funcionais (RNFs):** Todos mitigados através das escolhas arquiteturais diluídas nas Sprints (Vercel Background, IndexedDB, Firebase serverTimestamp, complexidade O(n) local).
 
-**⚠️ Alerta do Arquiteto:** A principal barreira para manter o custo absoluto em R$ 0,00 será o volume de processamento do LLM (Gemini). Mesmo sendo grátis, é crucial configurar corretamente os *prompts* com `responseMimeType: "application/json"` logo na Sprint 2 para garantir estruturação estrita e evitar loops infinitos de refatoração nos componentes visuais (RF06, RF08, RF10) que vão depender do payload perfeitamente tipado. Monitore de perto a latência do web hook e a fidelidade da extração.
+**⚠️ Alerta do Arquiteto:** A principal barreira para manter o custo absoluto em R$ 0,00 será o volume de processamento do LLM (Gemini). Mesmo sendo grátis, é crucial configurar corretamente os *prompts* com `responseMimeType: "application/json"` logo na Sprint 2 para garantir estruturação estrita e evitar loops infinitos de refatoração nos componentes visuais (RF06, RF08, RF10) que vão depender do payload perfeitamente tipado. Monitore de perto a latência do web hook e a fidelidade da extração. O RF13 (compartilhamento) introduz leituras públicas no Firestore — monitorar impacto no limite de 50k leituras/dia do plano Spark.

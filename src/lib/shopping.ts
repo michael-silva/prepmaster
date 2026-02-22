@@ -67,6 +67,26 @@ export async function removeItem(docId: string) {
   await deleteDoc(doc(db, "shopping_list", docId));
 }
 
+export async function toggleItems(docIds: string[], purchased: boolean) {
+  const batch = writeBatch(db);
+  for (const id of docIds) {
+    batch.update(doc(db, "shopping_list", id), {
+      purchased,
+      purchased_at: purchased ? serverTimestamp() : null,
+      updated_at: serverTimestamp(),
+    });
+  }
+  await batch.commit();
+}
+
+export async function removeItems(docIds: string[]) {
+  const batch = writeBatch(db);
+  for (const id of docIds) {
+    batch.delete(doc(db, "shopping_list", id));
+  }
+  await batch.commit();
+}
+
 export async function clearPurchased(uid: string) {
   const q = query(
     collection(db, "shopping_list"),

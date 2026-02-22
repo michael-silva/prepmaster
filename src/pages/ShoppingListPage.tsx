@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { User } from "firebase/auth";
-import { useShoppingList, type ShoppingItem } from "@/hooks/useShoppingList";
-import { addManualItem, toggleItem, removeItem, clearPurchased } from "@/lib/shopping";
+import { useShoppingList } from "@/hooks/useShoppingList";
+import { addManualItem, toggleItems, removeItems, clearPurchased } from "@/lib/shopping";
 import { useToastStore } from "@/stores/toastStore";
+import { formatConsolidatedLabel, type ConsolidatedItem } from "@/lib/consolidate";
 
 interface ShoppingListPageProps {
   user: User;
 }
 
 export function ShoppingListPage({ user }: ShoppingListPageProps) {
-  const { items, loading } = useShoppingList(user);
+  const { items, consolidated, loading } = useShoppingList(user);
   const addToast = useToastStore((s) => s.addToast);
   const [newItem, setNewItem] = useState("");
 
-  const pending = items.filter((i) => !i.purchased);
-  const purchased = items.filter((i) => i.purchased);
+  const pending = consolidated.filter((c) => !c.purchased);
+  const purchased = consolidated.filter((c) => c.purchased);
+  const purchasedRawCount = items.filter((i) => i.purchased).length;
 
   async function handleAdd() {
     const trimmed = newItem.trim();
@@ -28,17 +30,17 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
     }
   }
 
-  async function handleToggle(item: ShoppingItem) {
+  async function handleToggle(item: ConsolidatedItem) {
     try {
-      await toggleItem(item.id, !item.purchased);
+      await toggleItems(item.docIds, !item.purchased);
     } catch {
       addToast("Erro ao atualizar item.", "error");
     }
   }
 
-  async function handleRemove(item: ShoppingItem) {
+  async function handleRemove(item: ConsolidatedItem) {
     try {
-      await removeItem(item.id);
+      await removeItems(item.docIds);
     } catch {
       addToast("Erro ao remover item.", "error");
     }
@@ -48,7 +50,7 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
     if (purchased.length === 0) return;
     try {
       await clearPurchased(user.uid);
-      addToast(`${purchased.length} item(ns) removido(s).`, "info");
+      addToast(`${purchasedRawCount} item(ns) removido(s).`, "info");
     } catch {
       addToast("Erro ao limpar comprados.", "error");
     }
@@ -61,9 +63,9 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
           ←
         </Link>
         <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0, flex: 1 }}>Lista de Compras</h1>
-        {items.length > 0 && (
+        {consolidated.length > 0 && (
           <span style={{ color: "var(--color-muted)", fontSize: "0.85rem" }}>
-            {purchased.length}/{items.length}
+            {purchased.length}/{consolidated.length}
           </span>
         )}
       </div>
@@ -91,7 +93,7 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
         <p style={{ color: "var(--color-muted)", fontSize: "0.95rem" }}>Carregando lista...</p>
       )}
 
-      {!loading && items.length === 0 && (
+      {!loading && consolidated.length === 0 && (
         <section style={cardStyle}>
           <p style={{ color: "var(--color-muted)", fontSize: "0.95rem", margin: 0, textAlign: "center", padding: "1rem 0" }}>
             Sua lista está vazia. Adicione itens acima ou a partir de uma receita.
@@ -104,7 +106,7 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
           <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
             {pending.map((item) => (
               <ItemRow
-                key={item.id}
+                key={item.key}
                 item={item}
                 onToggle={() => handleToggle(item)}
                 onRemove={() => handleRemove(item)}
@@ -136,7 +138,7 @@ export function ShoppingListPage({ user }: ShoppingListPageProps) {
           <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
             {purchased.map((item) => (
               <ItemRow
-                key={item.id}
+                key={item.key}
                 item={item}
                 onToggle={() => handleToggle(item)}
                 onRemove={() => handleRemove(item)}
@@ -154,11 +156,12 @@ function ItemRow({
   onToggle,
   onRemove,
 }: {
-  item: ShoppingItem;
+  item: ConsolidatedItem;
   onToggle: () => void;
   onRemove: () => void;
 }) {
-  const label = formatLabel(item);
+  const label = formatConsolidatedLabel(item);
+  const mergedCount = item.docIds.length;
 
   return (
     <div style={rowStyle}>
@@ -170,18 +173,23 @@ function ItemRow({
       >
         {item.purchased && "✓"}
       </button>
-      <span
-        style={{
-          flex: 1,
-          fontSize: "0.95rem",
-          textDecoration: item.purchased ? "line-through" : "none",
-          color: item.purchased ? "var(--color-muted)" : "var(--color-text)",
-          opacity: item.purchased ? 0.6 : 1,
-        }}
-        onClick={onToggle}
-      >
-        {label}
-      </span>
+      <div style={{ flex: 1, minWidth: 0 }} onClick={onToggle}>
+        <span
+          style={{
+            fontSize: "0.95rem",
+            textDecoration: item.purchased ? "line-through" : "none",
+            color: item.purchased ? "var(--color-muted)" : "var(--color-text)",
+            opacity: item.purchased ? 0.6 : 1,
+          }}
+        >
+          {label}
+        </span>
+        {mergedCount > 1 && (
+          <span style={badgeStyle}>
+            {mergedCount}x
+          </span>
+        )}
+      </div>
       <button
         type="button"
         onClick={onRemove}
@@ -192,14 +200,6 @@ function ItemRow({
       </button>
     </div>
   );
-}
-
-function formatLabel(item: ShoppingItem): string {
-  const parts: string[] = [];
-  if (item.quantity != null) parts.push(String(item.quantity));
-  if (item.unit) parts.push(item.unit);
-  parts.push(item.item);
-  return parts.join(" ");
 }
 
 const cardStyle: React.CSSProperties = {
@@ -262,6 +262,17 @@ const checkboxStyle = (checked: boolean): React.CSSProperties => ({
   flexShrink: 0,
   padding: 0,
 });
+
+const badgeStyle: React.CSSProperties = {
+  marginLeft: "0.5rem",
+  fontSize: "0.75rem",
+  color: "var(--color-muted)",
+  background: "rgba(124, 184, 130, 0.15)",
+  borderRadius: "4px",
+  padding: "1px 5px",
+  fontWeight: 500,
+  verticalAlign: "middle",
+};
 
 const removeBtnStyle: React.CSSProperties = {
   background: "transparent",

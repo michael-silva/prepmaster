@@ -25,6 +25,9 @@ O sistema opera sob uma arquitetura **Event-Driven PWA (Offline-First)** de cust
 | RF09 | Gestão Transparente de Despensa | Cruzamento da lista de compras gerada com o estoque local, omitindo itens marcados como "Em Estoque". | Alta |
 | RF10 | Batch de Mise en Place | Agrupamento algorítmico de pré-preparos da semana em uma tela centralizada ("Preps de Domingo"). | Alta |
 | RF11 | Modo "Cozinha Guiada" | Interface *stepper* em tela cheia com *Wake Lock API* ativa para impedir bloqueio do display. | Média |
+| RF12 | Revisão Pré-Salvamento de Extração | Dados extraídos pela IA populam formulário editável; o usuário revisa e ajusta antes de salvar definitivamente na coleção `recipes`. | Alta |
+| RF13 | Organização em Listas de Receitas | Livro de receitas organizável em listas temáticas compartilháveis; outros usuários podem importar receitas dessas listas para seus próprios livros. | Média |
+| RF14 | Multiplicador de Porções na Lista de Compras | Ao enviar ingredientes de uma receita para a lista de compras, permitir informar multiplicador (N×) para ajustar quantidades proporcionalmente. | Alta |
 
 ## 3. Requisitos Não Funcionais (RNF)
 
