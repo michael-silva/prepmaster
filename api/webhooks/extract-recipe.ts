@@ -76,7 +76,7 @@ function extractArticleText(html: string): string {
     .trim();
 }
 
-async function fetchPageContent(url: string): Promise<{ text: string; source: "json-ld" | "html" }> {
+async function fetchPageContent(url: string): Promise<{ text: string }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
@@ -97,11 +97,11 @@ async function fetchPageContent(url: string): Promise<{ text: string; source: "j
 
     const jsonLd = extractJsonLd(html);
     if (jsonLd) {
-      return { text: jsonLd.slice(0, MAX_CONTENT_CHARS), source: "json-ld" };
+      return { text: jsonLd.slice(0, MAX_CONTENT_CHARS)};
     }
 
     const text = extractArticleText(html);
-    return { text: text.slice(0, MAX_CONTENT_CHARS), source: "html" };
+    return { text: text.slice(0, MAX_CONTENT_CHARS) };
   } finally {
     clearTimeout(timeout);
   }
@@ -207,18 +207,21 @@ export default async function handler(
     const isYouTube =
       /youtube\.com|youtu\.be/i.test(url);
 
-    let pageContent: string;
-    let contentSource: string;
+    let youtubePart: { fileData: { fileUri: string; mimeType: string } } | undefined;
+    let contentPart: string | undefined;
     if (isYouTube) {
       jlog.info("youtube url detected");
-      pageContent = `[YouTube video URL: ${url}]\n\nExtract recipe information from this YouTube cooking video. Use the URL as source_url. If the video is private, unavailable, or has no recipe content, return a JSON with title "Error" and ingredients/steps as empty arrays.`;
-      contentSource = "youtube";
+      youtubePart = {
+        fileData: {
+          fileUri: url,
+          mimeType: 'video/mp4', 
+        },
+      };
     } else {
       const fetched = await fetchPageContent(url);
-      pageContent = fetched.text;
-      contentSource = fetched.source;
-      jlog.info("page fetched", { contentLength: pageContent.length, source: contentSource });
-      if (!pageContent || pageContent.length < 100) {
+      contentPart = fetched.text;
+      jlog.info("page fetched", { contentLength: contentPart.length });
+      if (!contentPart || contentPart.length < 100) {
         throw new PermanentError("Could not fetch or extract meaningful content from URL");
       }
     }
@@ -241,13 +244,12 @@ export default async function handler(
     }
 
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `${RECIPE_EXTRACTION_PROMPT}\n\n---\n\nURL: ${url}\n\nContent (${contentSource}):\n${pageContent}`;
 
     let response;
     try {
       response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
-        contents: [prompt],
+        contents: youtubePart ? [youtubePart, RECIPE_EXTRACTION_PROMPT] : [`${RECIPE_EXTRACTION_PROMPT}\n\nnContent(${contentPart})`],
         config: {
           responseMimeType: "application/json",
         },
@@ -271,6 +273,7 @@ export default async function handler(
     const recipe = parseRecipeJson(text);
 
     if (recipe.title === "Error" && recipe.ingredients?.length === 0) {
+      jlog.info("permanent error", { response: text });
       throw new PermanentError("Video may be private, unavailable, or has no recipe content");
     }
 
