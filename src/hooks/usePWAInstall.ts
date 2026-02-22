@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 function getPlatform(): "ios" | "android" | "desktop" {
   const ua = navigator.userAgent;
@@ -15,76 +15,93 @@ function getPlatform(): "ios" | "android" | "desktop" {
   return "desktop";
 }
 
+const PLATFORM = getPlatform();
+
+// beforeinstallprompt fires once per page load — store it at module level
+// so it survives React component mount/unmount cycles.
+let savedPrompt: BeforeInstallPromptEvent | null = null;
+let promptAvailable = false;
+let installed = false;
+const listeners = new Set<() => void>();
+
+function notify() {
+  listeners.forEach((fn) => fn());
+}
+
+function subscribe(cb: () => void) {
+  listeners.add(cb);
+  return () => { listeners.delete(cb); };
+}
+
+function getSnapshot() {
+  return { promptAvailable, installed };
+}
+
+function initGlobalListeners() {
+  window.addEventListener("beforeinstallprompt", (e: Event) => {
+    e.preventDefault();
+    savedPrompt = e as BeforeInstallPromptEvent;
+    promptAvailable = true;
+    notify();
+  });
+
+  window.addEventListener("appinstalled", () => {
+    savedPrompt = null;
+    promptAvailable = false;
+    installed = true;
+    notify();
+  });
+
+  const standalone =
+    window.matchMedia("(display-mode: standalone)").matches ||
+    (window.navigator as Navigator & { standalone?: boolean }).standalone ===
+      true;
+
+  if (standalone) {
+    installed = true;
+  }
+}
+
+initGlobalListeners();
+
 export function usePWAInstall() {
-  const [deferredPrompt, setDeferredPrompt] =
-    useState<BeforeInstallPromptEvent | null>(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [showInstallButton, setShowInstallButton] = useState(false);
-  const [platform] = useState<"ios" | "android" | "desktop">(getPlatform);
-  const promptRef = useRef<BeforeInstallPromptEvent | null>(null);
-  promptRef.current = deferredPrompt;
+  const [snapshotRef, setSnapshotRef] = useState(getSnapshot);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      const ev = e as BeforeInstallPromptEvent;
-      promptRef.current = ev;
-      setDeferredPrompt(ev);
-      setShowInstallButton(true);
-    };
-
-    const installedHandler = () => {
-      setShowInstallButton(false);
-      setDeferredPrompt(null);
-      promptRef.current = null;
-      setIsInstalled(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handler);
-    window.addEventListener("appinstalled", installedHandler);
-
-    const standalone =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as Navigator & { standalone?: boolean }).standalone ===
-        true;
-
-    setIsInstalled(standalone);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handler);
-      window.removeEventListener("appinstalled", installedHandler);
-    };
+    const unsub = subscribe(() => setSnapshotRef(getSnapshot()));
+    setSnapshotRef(getSnapshot());
+    return unsub;
   }, []);
 
-  function install() {
-    const prompt = promptRef.current ?? deferredPrompt;
-    if (!prompt) return false;
+  const { promptAvailable: hasPrompt, installed: isInstalled } = snapshotRef;
+
+  const install = useCallback(() => {
+    if (!savedPrompt) return false;
     try {
-      prompt.prompt();
-      prompt.userChoice.then(({ outcome }) => {
+      savedPrompt.prompt();
+      savedPrompt.userChoice.then(({ outcome }) => {
         if (outcome === "accepted") {
-          setShowInstallButton(false);
-          setDeferredPrompt(null);
-          promptRef.current = null;
+          savedPrompt = null;
+          promptAvailable = false;
+          notify();
         }
       });
       return true;
     } catch {
       return false;
     }
-  }
+  }, []);
 
   // No iOS, beforeinstallprompt NUNCA dispara; no Android pode demorar (30s+).
-  // Mostrar instruções manuais quando não instalado e não temos o prompt.
   const showInstallHint =
     !isInstalled &&
-    (platform === "ios" || (platform === "android" && !deferredPrompt));
+    (PLATFORM === "ios" || (PLATFORM === "android" && !hasPrompt));
 
   return {
-    canInstall: showInstallButton && !!deferredPrompt && !isInstalled,
+    canInstall: hasPrompt && !isInstalled,
     isInstalled,
     install,
-    platform,
+    platform: PLATFORM,
     showInstallHint,
   };
 }
