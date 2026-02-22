@@ -24,7 +24,59 @@ function getRawBody(req: VercelRequest): Promise<string> {
   });
 }
 
-async function fetchPageContent(url: string): Promise<string> {
+const MAX_CONTENT_CHARS = 15000;
+
+function extractJsonLd(html: string): string | null {
+  const matches = html.match(
+    /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
+  );
+  if (!matches) return null;
+
+  for (const block of matches) {
+    const json = block
+      .replace(/<script[^>]*>/i, "")
+      .replace(/<\/script>/i, "")
+      .trim();
+    try {
+      const parsed = JSON.parse(json);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      const recipe = items.find(
+        (i: Record<string, unknown>) =>
+          i["@type"] === "Recipe" ||
+          (Array.isArray(i["@type"]) && (i["@type"] as string[]).includes("Recipe"))
+      );
+      if (recipe) return JSON.stringify(recipe);
+    } catch { /* ignore malformed JSON-LD */ }
+  }
+  return null;
+}
+
+function extractArticleText(html: string): string {
+  let content = html;
+
+  const articleMatch = content.match(
+    /<article[^>]*>([\s\S]*?)<\/article>/i
+  );
+  if (articleMatch) {
+    content = articleMatch[1];
+  } else {
+    const mainMatch = content.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+    if (mainMatch) content = mainMatch[1];
+  }
+
+  return content
+    .replace(/<script\b[\s\S]*?<\/script>/gi, "")
+    .replace(/<style\b[\s\S]*?<\/style>/gi, "")
+    .replace(/<nav\b[\s\S]*?<\/nav>/gi, "")
+    .replace(/<footer\b[\s\S]*?<\/footer>/gi, "")
+    .replace(/<header\b[\s\S]*?<\/header>/gi, "")
+    .replace(/<aside\b[\s\S]*?<\/aside>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function fetchPageContent(url: string): Promise<{ text: string; source: "json-ld" | "html" }> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
@@ -42,16 +94,23 @@ async function fetchPageContent(url: string): Promise<string> {
     }
 
     const html = await res.text();
-    const text = html
-      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim();
 
-    return text.slice(0, 50000);
+    const jsonLd = extractJsonLd(html);
+    if (jsonLd) {
+      return { text: jsonLd.slice(0, MAX_CONTENT_CHARS), source: "json-ld" };
+    }
+
+    const text = extractArticleText(html);
+    return { text: text.slice(0, MAX_CONTENT_CHARS), source: "html" };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RateLimitError";
   }
 }
 
@@ -149,12 +208,16 @@ export default async function handler(
       /youtube\.com|youtu\.be/i.test(url);
 
     let pageContent: string;
+    let contentSource: string;
     if (isYouTube) {
       jlog.info("youtube url detected");
       pageContent = `[YouTube video URL: ${url}]\n\nExtract recipe information from this YouTube cooking video. Use the URL as source_url. If the video is private, unavailable, or has no recipe content, return a JSON with title "Error" and ingredients/steps as empty arrays.`;
+      contentSource = "youtube";
     } else {
-      pageContent = await fetchPageContent(url);
-      jlog.info("page fetched", { contentLength: pageContent.length });
+      const fetched = await fetchPageContent(url);
+      pageContent = fetched.text;
+      contentSource = fetched.source;
+      jlog.info("page fetched", { contentLength: pageContent.length, source: contentSource });
       if (!pageContent || pageContent.length < 100) {
         throw new PermanentError("Could not fetch or extract meaningful content from URL");
       }
@@ -165,30 +228,46 @@ export default async function handler(
       throw new PermanentError("GEMINI_API_KEY is not configured");
     }
 
+    const GEMINI_RPD_LIMIT = 18;
+    const today = new Date().toISOString().slice(0, 10);
+    const quotaRef = db.collection("_system").doc("gemini_quota");
+    const quotaSnap = await quotaRef.get();
+    const quotaData = quotaSnap.data();
+    const currentCount = quotaData?.date === today ? (quotaData.count as number) : 0;
+
+    if (currentCount >= GEMINI_RPD_LIMIT) {
+      jlog.warn("daily gemini quota exhausted", { count: currentCount, limit: GEMINI_RPD_LIMIT });
+      throw new RateLimitError(`Daily Gemini quota exhausted (${currentCount}/${GEMINI_RPD_LIMIT})`);
+    }
+
     const ai = new GoogleGenAI({ apiKey });
-    const prompt = `${RECIPE_EXTRACTION_PROMPT}\n\n---\n\nURL: ${url}\n\nContent:\n${pageContent}`;
-    // O TRUQUE MÁGICO: Passar o link do YouTube como um arquivo multimodal
-    // const youtubePart = {
-    //   fileData: {
-    //     fileUri: url,
-    //     mimeType: 'video/mp4', 
-    //   },
-    // };
-    const response = await ai.models.generateContent({
-      model: "gemini-3.0-flash",
-      // contents: [youtubePart, prompt],
-      contents: [prompt],
-      config: {
-        responseMimeType: "application/json",
-      },
-    });
+    const prompt = `${RECIPE_EXTRACTION_PROMPT}\n\n---\n\nURL: ${url}\n\nContent (${contentSource}):\n${pageContent}`;
+
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [prompt],
+        config: {
+          responseMimeType: "application/json",
+        },
+      });
+    } catch (geminiErr) {
+      const msg = geminiErr instanceof Error ? geminiErr.message : String(geminiErr);
+      if (msg.includes("429") || msg.toLowerCase().includes("rate limit") || msg.toLowerCase().includes("quota")) {
+        throw new RateLimitError(`Gemini rate limit exceeded: ${msg}`);
+      }
+      throw geminiErr;
+    }
+
+    await quotaRef.set({ date: today, count: currentCount + 1 }, { merge: true });
 
     const text = response.text ?? "";
     if (!text) {
       throw new Error("Empty response from Gemini");
     }
 
-    jlog.info("gemini response received", { responseLength: text.length });
+    jlog.info("gemini response received", { responseLength: text.length, dailyUsage: currentCount + 1 });
     const recipe = parseRecipeJson(text);
 
     if (recipe.title === "Error" && recipe.ingredients?.length === 0) {
@@ -226,7 +305,18 @@ export default async function handler(
     const errorMessage =
       err instanceof Error ? err.message : "Extraction failed";
     const isPermanent = err instanceof PermanentError;
-    jlog.error("extraction failed", { errorMessage, permanent: isPermanent, retryCount });
+    const isRateLimit = err instanceof RateLimitError;
+    jlog.error("extraction failed", { errorMessage, permanent: isPermanent, rateLimit: isRateLimit, retryCount });
+
+    if (isRateLimit) {
+      try {
+        await jobRef.update({ status: "pending", error: errorMessage });
+      } catch (updateErr) {
+        jlog.error("failed to update job status", updateErr);
+      }
+      res.status(500).json({ error: errorMessage, retryable: true });
+      return;
+    }
 
     try {
       await jobRef.update({
