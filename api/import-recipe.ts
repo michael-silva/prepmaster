@@ -52,7 +52,6 @@ export default async function handler(
 
     const existing = await db
       .collection("jobs")
-      .where("user_id", "==", userId)
       .where("url", "==", url)
       .where("status", "in", ["pending", "processing"])
       .limit(1)

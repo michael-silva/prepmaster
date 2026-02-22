@@ -166,9 +166,18 @@ export default async function handler(
     }
 
     const ai = new GoogleGenAI({ apiKey });
+    const prompt = `${RECIPE_EXTRACTION_PROMPT}\n\n---\n\nURL: ${url}\n\nContent:\n${pageContent}`;
+    // O TRUQUE MÁGICO: Passar o link do YouTube como um arquivo multimodal
+    // const youtubePart = {
+    //   fileData: {
+    //     fileUri: url,
+    //     mimeType: 'video/mp4', 
+    //   },
+    // };
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: `${RECIPE_EXTRACTION_PROMPT}\n\n---\n\nURL: ${url}\n\nContent:\n${pageContent}`,
+      model: "gemini-3.0-flash",
+      // contents: [youtubePart, prompt],
+      contents: [prompt],
       config: {
         responseMimeType: "application/json",
       },
