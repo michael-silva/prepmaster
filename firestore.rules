@@ -2,35 +2,51 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users: cada usuário só acessa seu próprio documento
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+    function isAuthenticated() {
+      return request.auth != null;
     }
 
-    // jobs, recipes, shopping_list, pantry: multi-tenant por user_id
+    function isDocOwner() {
+      return isAuthenticated() && resource.data.user_id == request.auth.uid;
+    }
+
+    function isNewDocOwner() {
+      return isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
     match /jobs/{jobId} {
-      allow read, write: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow read: if isDocOwner();
+      allow create: if isNewDocOwner();
+      allow update, delete: if isDocOwner();
     }
 
     match /recipes/{recipeId} {
-      allow read, write: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow read: if isDocOwner();
+      allow create: if isNewDocOwner();
+      allow update, delete: if isDocOwner();
     }
 
     match /shopping_list/{docId} {
-      allow read, write: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow read: if isDocOwner();
+      allow create: if isNewDocOwner();
+      allow update, delete: if isDocOwner();
     }
 
     match /pantry/{docId} {
-      allow read, write: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow read: if isDocOwner();
+      allow create: if isNewDocOwner();
+      allow update, delete: if isDocOwner();
     }
 
     match /prep_catalog/{docId} {
-      allow read, write: if request.auth != null && resource.data.user_id == request.auth.uid;
-      allow create: if request.auth != null && request.resource.data.user_id == request.auth.uid;
+      allow read: if isDocOwner();
+      allow create: if isNewDocOwner();
+      allow update, delete: if isDocOwner();
     }
   }
 }
