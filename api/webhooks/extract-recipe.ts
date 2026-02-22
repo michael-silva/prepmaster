@@ -313,7 +313,7 @@ export default async function handler(
 
     if (isRateLimit) {
       try {
-        await jobRef.update({ status: "pending", error: errorMessage });
+        await jobRef.update({ status: "failed", error: errorMessage });
       } catch (updateErr) {
         jlog.error("failed to update job status", updateErr);
       }
