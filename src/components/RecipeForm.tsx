@@ -8,6 +8,9 @@ const AISLE_OPTIONS = [
   "Congelados", "Bebidas", "Mercearia", "Higiene", "Outros",
 ];
 
+const INPUT_CLS = "px-3 py-2.5 text-[0.95rem] bg-bg text-text border border-border rounded-lg mb-3 w-full focus:outline-none focus:border-accent transition-colors";
+const ROW_CLS = "flex gap-2 items-center mb-1";
+
 export interface RecipeFormData {
   title: string;
   source_url: string;
@@ -136,48 +139,48 @@ export function RecipeForm({ initialData, prepEntries, onSave, saving }: RecipeF
 
   return (
     <form onSubmit={handleSubmit}>
-      <label style={labelStyle}>Título *</label>
+      <label className="block text-sm font-medium text-muted mb-1">Título *</label>
       <input
         type="text"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         required
-        style={inputStyle}
+        className={INPUT_CLS}
         placeholder="Nome da receita"
       />
 
-      <label style={labelStyle}>URL de origem</label>
+      <label className="block text-sm font-medium text-muted mb-1">URL de origem</label>
       <input
         type="url"
         value={sourceUrl}
         onChange={(e) => setSourceUrl(e.target.value)}
-        style={inputStyle}
+        className={INPUT_CLS}
         placeholder="https://... (opcional)"
       />
 
-      <div style={metaRowStyle}>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Porções</label>
-          <input type="number" value={servings} onChange={(e) => setServings(e.target.value)} style={inputStyle} min={0} />
+      <div className="flex gap-3 mb-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-muted mb-1">Porções</label>
+          <input type="number" value={servings} onChange={(e) => setServings(e.target.value)} className={INPUT_CLS} min={0} />
         </div>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Preparo (min)</label>
-          <input type="number" value={prepTime} onChange={(e) => setPrepTime(e.target.value)} style={inputStyle} min={0} />
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-muted mb-1">Preparo (min)</label>
+          <input type="number" value={prepTime} onChange={(e) => setPrepTime(e.target.value)} className={INPUT_CLS} min={0} />
         </div>
-        <div style={{ flex: 1 }}>
-          <label style={labelStyle}>Cozimento (min)</label>
-          <input type="number" value={cookTime} onChange={(e) => setCookTime(e.target.value)} style={inputStyle} min={0} />
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-muted mb-1">Cozimento (min)</label>
+          <input type="number" value={cookTime} onChange={(e) => setCookTime(e.target.value)} className={INPUT_CLS} min={0} />
         </div>
       </div>
 
       <SectionHeader title="Ingredientes" onAdd={() => setIngredients((p) => [...p, keyedIngredient(nextKey)])} />
       {ingredients.map((ing, idx) => (
-        <div key={ing._key} style={rowStyle}>
+        <div key={ing._key} className={ROW_CLS}>
           <input
             type="number"
             value={ing.quantity ?? ""}
             onChange={(e) => updateIngredient(idx, "quantity", e.target.value ? parseFloat(e.target.value) : undefined)}
-            style={{ ...inputStyle, width: "70px", marginBottom: 0 }}
+            className={`${INPUT_CLS} !w-[70px] !mb-0`}
             placeholder="Qtd"
             step="any"
           />
@@ -185,41 +188,41 @@ export function RecipeForm({ initialData, prepEntries, onSave, saving }: RecipeF
             type="text"
             value={ing.unit ?? ""}
             onChange={(e) => updateIngredient(idx, "unit", e.target.value || undefined)}
-            style={{ ...inputStyle, width: "80px", marginBottom: 0 }}
+            className={`${INPUT_CLS} !w-20 !mb-0`}
             placeholder="Un."
           />
           <input
             type="text"
             value={ing.item}
             onChange={(e) => updateIngredient(idx, "item", e.target.value)}
-            style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+            className={`${INPUT_CLS} flex-1 !mb-0`}
             placeholder="Ingrediente"
           />
           <select
             value={ing.aisle ?? ""}
             onChange={(e) => updateIngredient(idx, "aisle", e.target.value || undefined)}
-            style={{ ...inputStyle, width: "120px", marginBottom: 0 }}
+            className={`${INPUT_CLS} !w-[120px] !mb-0`}
           >
             <option value="">Corredor</option>
             {AISLE_OPTIONS.map((a) => (
               <option key={a} value={a}>{a}</option>
             ))}
           </select>
-          <button type="button" onClick={() => removeIngredient(idx)} style={removeBtnStyle}>×</button>
+          <button type="button" onClick={() => removeIngredient(idx)} className="bg-transparent border-none text-muted text-xl cursor-pointer px-1 shrink-0 hover:text-error transition-colors">×</button>
         </div>
       ))}
 
       <SectionHeader title="Modo de Preparo" onAdd={() => setSteps((p) => [...p, keyedStep(nextKey, p.length + 1)])} />
       {steps.map((step, idx) => (
-        <div key={step._key} style={rowStyle}>
-          <span style={stepNumberStyle}>{idx + 1}.</span>
+        <div key={step._key} className={ROW_CLS}>
+          <span className="text-muted text-sm min-w-[24px]">{idx + 1}.</span>
           <textarea
             value={step.instruction}
             onChange={(e) => updateStep(idx, e.target.value)}
-            style={{ ...inputStyle, flex: 1, marginBottom: 0, minHeight: "48px", resize: "vertical" }}
+            className={`${INPUT_CLS} flex-1 !mb-0 min-h-[48px] resize-y`}
             placeholder="Instrução do passo"
           />
-          <button type="button" onClick={() => removeStep(idx)} style={removeBtnStyle}>×</button>
+          <button type="button" onClick={() => removeStep(idx)} className="bg-transparent border-none text-muted text-xl cursor-pointer px-1 shrink-0 hover:text-error transition-colors">×</button>
         </div>
       ))}
 
@@ -227,30 +230,30 @@ export function RecipeForm({ initialData, prepEntries, onSave, saving }: RecipeF
       {mep.map((m, idx) => {
         const entry = findPrepEntry(m.ingredient, m.technique);
         return (
-          <div key={m._key} style={{ marginBottom: "0.5rem" }}>
-            <div style={rowStyle}>
+          <div key={m._key} className="mb-2">
+            <div className={ROW_CLS}>
               <input
                 type="text"
                 value={m.ingredient}
                 onChange={(e) => updateMep(idx, "ingredient", e.target.value)}
-                style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+                className={`${INPUT_CLS} flex-1 !mb-0`}
                 placeholder="Ingrediente"
               />
               <input
                 type="text"
                 value={m.technique}
                 onChange={(e) => updateMep(idx, "technique", e.target.value)}
-                style={{ ...inputStyle, flex: 1, marginBottom: 0 }}
+                className={`${INPUT_CLS} flex-1 !mb-0`}
                 placeholder="Técnica"
               />
               <input
                 type="text"
                 value={m.quantity ?? ""}
                 onChange={(e) => updateMep(idx, "quantity", e.target.value)}
-                style={{ ...inputStyle, width: "90px", marginBottom: 0 }}
+                className={`${INPUT_CLS} !w-[90px] !mb-0`}
                 placeholder="Qtd"
               />
-              <button type="button" onClick={() => removeMep(idx)} style={removeBtnStyle}>×</button>
+              <button type="button" onClick={() => removeMep(idx)} className="bg-transparent border-none text-muted text-xl cursor-pointer px-1 shrink-0 hover:text-error transition-colors">×</button>
             </div>
             {entry && <PrepMetadataRow entry={entry} />}
           </div>
@@ -260,11 +263,7 @@ export function RecipeForm({ initialData, prepEntries, onSave, saving }: RecipeF
       <button
         type="submit"
         disabled={saving || !title.trim()}
-        style={{
-          ...submitBtnStyle,
-          opacity: saving || !title.trim() ? 0.5 : 1,
-          cursor: saving || !title.trim() ? "not-allowed" : "pointer",
-        }}
+        className="w-full px-6 py-4 text-base font-semibold bg-accent text-bg border-none rounded-lg mt-6 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-110 transition"
       >
         {saving ? "Salvando..." : "Salvar Receita"}
       </button>
@@ -274,89 +273,11 @@ export function RecipeForm({ initialData, prepEntries, onSave, saving }: RecipeF
 
 function SectionHeader({ title, onAdd }: { title: string; onAdd: () => void }) {
   return (
-    <div style={sectionHeaderStyle}>
-      <h3 style={{ fontSize: "1rem", fontWeight: 600, margin: 0, color: "var(--color-accent)" }}>{title}</h3>
-      <button type="button" onClick={onAdd} style={addBtnStyle}>+ Adicionar</button>
+    <div className="flex justify-between items-center mb-2 mt-4">
+      <h3 className="text-base font-semibold m-0 text-accent">{title}</h3>
+      <button type="button" onClick={onAdd} className="bg-transparent border border-accent/40 text-accent text-sm font-medium rounded-md px-2.5 py-1 cursor-pointer hover:bg-accent/10 transition-colors">
+        + Adicionar
+      </button>
     </div>
   );
 }
-
-const labelStyle: React.CSSProperties = {
-  display: "block",
-  fontSize: "0.85rem",
-  fontWeight: 500,
-  color: "var(--color-muted)",
-  marginBottom: "0.25rem",
-};
-
-const inputStyle: React.CSSProperties = {
-  padding: "0.65rem 0.75rem",
-  fontSize: "0.95rem",
-  background: "var(--color-bg)",
-  color: "var(--color-text)",
-  border: "1px solid rgba(124, 184, 130, 0.3)",
-  borderRadius: "8px",
-  marginBottom: "0.75rem",
-  boxSizing: "border-box",
-  width: "100%",
-};
-
-const rowStyle: React.CSSProperties = {
-  display: "flex",
-  gap: "0.5rem",
-  alignItems: "center",
-  marginBottom: "0.35rem",
-};
-
-const metaRowStyle: React.CSSProperties = {
-  display: "flex",
-  gap: "0.75rem",
-  marginBottom: "1rem",
-};
-
-const stepNumberStyle: React.CSSProperties = {
-  color: "var(--color-muted)",
-  fontSize: "0.85rem",
-  minWidth: "24px",
-};
-
-const sectionHeaderStyle: React.CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "0.5rem",
-  marginTop: "1rem",
-};
-
-const removeBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "var(--color-muted)",
-  fontSize: "1.25rem",
-  cursor: "pointer",
-  padding: "0 0.25rem",
-  flexShrink: 0,
-};
-
-const addBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid rgba(124, 184, 130, 0.4)",
-  color: "var(--color-accent)",
-  fontSize: "0.8rem",
-  fontWeight: 500,
-  borderRadius: "6px",
-  padding: "0.3rem 0.65rem",
-  cursor: "pointer",
-};
-
-const submitBtnStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "1rem 1.5rem",
-  fontSize: "1rem",
-  fontWeight: 600,
-  background: "var(--color-accent)",
-  color: "var(--color-bg)",
-  border: "none",
-  borderRadius: "10px",
-  marginTop: "1.5rem",
-};

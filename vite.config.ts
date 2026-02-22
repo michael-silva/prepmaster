@@ -1,10 +1,12 @@
 import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 import path from "path";
 
 export default defineConfig({
   plugins: [
+    tailwindcss(),
     react(),
     VitePWA({
       registerType: "autoUpdate",
@@ -15,8 +17,8 @@ export default defineConfig({
         name: "PrepMaster",
         short_name: "PrepMaster",
         description: "Gerenciador de cadeia de suprimentos para a cozinha",
-        theme_color: "#1a472a",
-        background_color: "#0d2818",
+        theme_color: "#162B20",
+        background_color: "#0C1F17",
         display: "standalone",
         orientation: "portrait",
         scope: "/",

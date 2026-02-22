@@ -16,22 +16,7 @@ export function InstallHint({ fallback }: InstallHintProps) {
           e.preventDefault();
           install();
         }}
-        style={{
-          width: "100%",
-          marginTop: "1rem",
-          padding: "0.875rem 1.5rem",
-          fontSize: "0.95rem",
-          fontWeight: 500,
-          background: "transparent",
-          color: "var(--color-accent)",
-          border: "1px solid var(--color-accent)",
-          borderRadius: "10px",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "0.5rem",
-        }}
+        className="w-full mt-4 px-6 py-3.5 text-[0.95rem] font-medium bg-transparent text-accent border border-accent rounded-lg cursor-pointer flex items-center justify-center gap-2 hover:bg-accent/10 transition-colors"
       >
         <InstallIcon />
         Instalar app
@@ -45,7 +30,6 @@ export function InstallHint({ fallback }: InstallHintProps) {
         ? "Compartilhar → Adicionar à Tela de Início"
         : "Menu ⋮ → Instalar app ou Adicionar à tela inicial";
 
-    // No Android, tentar install() ao tocar — deferredPrompt pode ter disparado depois
     const handleClick = platform === "android" ? () => install() : undefined;
 
     return (
@@ -58,50 +42,16 @@ export function InstallHint({ fallback }: InstallHintProps) {
             ? (e) => e.key === "Enter" && handleClick()
             : undefined
         }
-        style={{
-          marginTop: "2rem",
-          padding: "1rem 1.25rem",
-          background: "rgba(26, 71, 42, 0.35)",
-          borderRadius: "10px",
-          border: "1px solid rgba(124, 184, 130, 0.4)",
-          display: "flex",
-          alignItems: "center",
-          gap: "1rem",
-          cursor: handleClick ? "pointer" : undefined,
-        }}
+        className={`mt-8 p-4 pr-5 bg-elevated/35 rounded-lg border border-accent/40 flex items-center gap-4 ${handleClick ? "cursor-pointer" : ""}`}
       >
-        <div
-          style={{
-            flexShrink: 0,
-            width: 44,
-            height: 44,
-            borderRadius: "10px",
-            background: "rgba(124, 184, 130, 0.25)",
-            color: "var(--color-accent)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
+        <div className="shrink-0 w-11 h-11 rounded-lg bg-accent/25 text-accent flex items-center justify-center">
           <InstallIcon />
         </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontWeight: 600,
-              color: "var(--color-text)",
-              fontSize: "1rem",
-            }}
-          >
+        <div className="flex-1 min-w-0">
+          <div className="font-semibold text-text text-base">
             Instalar app
           </div>
-          <div
-            style={{
-              fontSize: "0.85rem",
-              color: "var(--color-muted)",
-              marginTop: "0.25rem",
-            }}
-          >
+          <div className="text-sm text-muted mt-1">
             {hint}
           </div>
         </div>

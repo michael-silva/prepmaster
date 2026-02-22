@@ -2,6 +2,8 @@ import { useState } from "react";
 import type { PrepEntry } from "@/lib/prepCatalog";
 import { updatePrepEntry } from "@/lib/prepCatalog";
 
+const INPUT_CLS = "px-3 py-2.5 text-[0.95rem] bg-bg text-text border border-border rounded-lg w-full focus:outline-none focus:border-accent transition-colors";
+
 interface PrepMetadataRowProps {
   entry: PrepEntry;
 }
@@ -31,29 +33,35 @@ export function PrepMetadataRow({ entry }: PrepMetadataRowProps) {
     if (entry.freeze_duration_days != null) parts.push(`Congelado: ${entry.freeze_duration_days}d`);
 
     return (
-      <div style={{ paddingLeft: "0.5rem", marginTop: "0.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-        <span style={{ color: "var(--color-muted)", fontSize: "0.8rem" }}>
+      <div className="pl-2 mt-1 flex items-center gap-2">
+        <span className="text-muted text-sm">
           {parts.length > 0 ? parts.join(" | ") : "Sem dados de conservação"}
         </span>
-        <button type="button" onClick={() => setEditing(true)} style={metaEditBtnStyle}>editar</button>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="bg-transparent border-none text-accent text-xs cursor-pointer underline p-0"
+        >
+          editar
+        </button>
       </div>
     );
   }
 
   return (
-    <div style={{ ...rowStyle, marginTop: "0.25rem", paddingLeft: "0.5rem" }}>
+    <div className="flex gap-2 items-center mt-1 pl-2">
       <input
         type="number"
         value={fridgeDays}
         onChange={(e) => setFridgeDays(e.target.value)}
-        style={{ ...inputStyle, width: "80px", marginBottom: 0 }}
+        className={`${INPUT_CLS} !w-20`}
         placeholder="Gelad. (d)"
         min={0}
       />
       <select
         value={freezable}
         onChange={(e) => setFreezable(e.target.value)}
-        style={{ ...inputStyle, width: "120px", marginBottom: 0 }}
+        className={`${INPUT_CLS} !w-[120px]`}
       >
         <option value="">Congela?</option>
         <option value="sim">Sim</option>
@@ -63,62 +71,16 @@ export function PrepMetadataRow({ entry }: PrepMetadataRowProps) {
         type="number"
         value={freezeDays}
         onChange={(e) => setFreezeDays(e.target.value)}
-        style={{ ...inputStyle, width: "80px", marginBottom: 0 }}
+        className={`${INPUT_CLS} !w-20`}
         placeholder="Cong. (d)"
         min={0}
       />
-      <button type="button" onClick={handleSaveMeta} style={addBtnStyle}>OK</button>
-      <button type="button" onClick={() => setEditing(false)} style={removeBtnStyle}>×</button>
+      <button type="button" onClick={handleSaveMeta} className="bg-transparent border border-accent/40 text-accent text-sm font-medium rounded-md px-2.5 py-1 cursor-pointer hover:bg-accent/10 transition-colors">
+        OK
+      </button>
+      <button type="button" onClick={() => setEditing(false)} className="bg-transparent border-none text-muted text-xl cursor-pointer px-1 shrink-0 hover:text-error transition-colors">
+        ×
+      </button>
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  padding: "0.65rem 0.75rem",
-  fontSize: "0.95rem",
-  background: "var(--color-bg)",
-  color: "var(--color-text)",
-  border: "1px solid rgba(124, 184, 130, 0.3)",
-  borderRadius: "8px",
-  marginBottom: "0.75rem",
-  boxSizing: "border-box",
-  width: "100%",
-};
-
-const rowStyle: React.CSSProperties = {
-  display: "flex",
-  gap: "0.5rem",
-  alignItems: "center",
-  marginBottom: "0.35rem",
-};
-
-const removeBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "var(--color-muted)",
-  fontSize: "1.25rem",
-  cursor: "pointer",
-  padding: "0 0.25rem",
-  flexShrink: 0,
-};
-
-const addBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid rgba(124, 184, 130, 0.4)",
-  color: "var(--color-accent)",
-  fontSize: "0.8rem",
-  fontWeight: 500,
-  borderRadius: "6px",
-  padding: "0.3rem 0.65rem",
-  cursor: "pointer",
-};
-
-const metaEditBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "var(--color-accent)",
-  fontSize: "0.75rem",
-  cursor: "pointer",
-  textDecoration: "underline",
-  padding: 0,
-};

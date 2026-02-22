@@ -15,104 +15,50 @@ export function HomePage({ user, activeJobs }: HomePageProps) {
   const { recipes, loading } = useRecipes(user);
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        padding: "1.5rem",
-        background: "var(--color-bg)",
-      }}
-    >
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "2rem",
-        }}
-      >
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 600 }}>PrepMaster</h1>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "0.75rem",
-          }}
-        >
+    <main className="min-h-screen p-6 bg-bg">
+      <header className="flex items-center justify-between mb-8">
+        <h1 className="text-2xl font-semibold">PrepMaster</h1>
+        <div className="flex items-center gap-3">
           {user.photoURL && (
             <img
               src={user.photoURL}
               alt=""
               width={36}
               height={36}
-              style={{ borderRadius: "50%" }}
+              className="rounded-full"
               referrerPolicy="no-referrer"
             />
           )}
-          <span style={{ color: "var(--color-muted)", fontSize: "0.9rem" }}>
+          <span className="text-muted text-sm">
             {user.displayName ?? user.email}
           </span>
           <button
             type="button"
             onClick={() => signOut()}
-            style={{
-              padding: "0.5rem 1rem",
-              background: "transparent",
-              color: "var(--color-muted)",
-              border: "1px solid var(--color-muted)",
-              borderRadius: "8px",
-              cursor: "pointer",
-              fontSize: "0.9rem",
-            }}
+            className="px-4 py-2 bg-transparent text-muted border border-muted rounded-lg cursor-pointer text-sm hover:border-accent hover:text-accent transition-colors"
           >
             Sair
           </button>
         </div>
       </header>
 
-      <section
-        style={{
-          background: "var(--color-surface)",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          border: "1px solid rgba(124, 184, 130, 0.2)",
-          marginBottom: "1.5rem",
-        }}
-      >
-        <h2 style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
+      <section className="bg-surface rounded-xl p-6 border border-border mb-6">
+        <h2 className="text-xl mb-2">
           Bem-vindo, {user.displayName?.split(" ")[0] ?? "chef"}!
         </h2>
-        <p style={{ color: "var(--color-muted)", marginBottom: "1rem" }}>
+        <p className="text-muted mb-4">
           Sua sessão está ativa. Importe receitas por URL e planeje sua semana.
         </p>
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
+        <div className="flex gap-3 flex-wrap">
           <Link
             to="/nova-receita"
-            style={{
-              display: "inline-block",
-              padding: "0.75rem 1.25rem",
-              fontSize: "0.95rem",
-              fontWeight: 600,
-              background: "var(--color-accent)",
-              color: "var(--color-bg)",
-              borderRadius: "10px",
-              textDecoration: "none",
-            }}
+            className="inline-block px-5 py-3 text-[0.95rem] font-semibold bg-accent text-bg rounded-lg no-underline hover:brightness-110 transition"
           >
             Nova Receita
           </Link>
           <Link
             to="/lista-de-compras"
-            style={{
-              display: "inline-block",
-              padding: "0.75rem 1.25rem",
-              fontSize: "0.95rem",
-              fontWeight: 600,
-              background: "transparent",
-              color: "var(--color-accent)",
-              border: "1px solid var(--color-accent)",
-              borderRadius: "10px",
-              textDecoration: "none",
-            }}
+            className="inline-block px-5 py-3 text-[0.95rem] font-semibold bg-transparent text-accent border border-accent rounded-lg no-underline hover:bg-accent/10 transition"
           >
             Lista de Compras
           </Link>
@@ -121,10 +67,8 @@ export function HomePage({ user, activeJobs }: HomePageProps) {
 
       {activeJobs.length > 0 && <ActiveJobsBanner jobs={activeJobs} />}
 
-      <section style={{ marginBottom: "1.5rem" }}>
-        <h2 style={{ fontSize: "1.15rem", fontWeight: 600, marginBottom: "0.75rem" }}>
-          Minhas Receitas
-        </h2>
+      <section className="mb-6">
+        <h2 className="text-lg font-semibold mb-3">Minhas Receitas</h2>
         <RecipeList recipes={recipes} loading={loading} user={user} />
       </section>
 
@@ -138,32 +82,9 @@ function ActiveJobsBanner({ jobs }: { jobs: ActiveJob[] }) {
   const label = count === 1 ? "receita sendo extraída..." : `${count} receitas sendo extraídas...`;
 
   return (
-    <div
-      style={{
-        background: "rgba(124, 184, 130, 0.12)",
-        border: "1px solid rgba(124, 184, 130, 0.3)",
-        borderRadius: "10px",
-        padding: "0.875rem 1.25rem",
-        marginBottom: "1.5rem",
-        display: "flex",
-        alignItems: "center",
-        gap: "0.75rem",
-      }}
-    >
-      <div style={smallSpinnerStyle} />
-      <span style={{ color: "var(--color-text)", fontSize: "0.95rem", fontWeight: 500 }}>
-        {label}
-      </span>
+    <div className="bg-accent-soft border border-accent/30 rounded-lg px-5 py-3.5 mb-6 flex items-center gap-3">
+      <div className="w-5 h-5 border-2 border-accent/20 border-t-accent rounded-full animate-spin shrink-0" />
+      <span className="text-text text-[0.95rem] font-medium">{label}</span>
     </div>
   );
 }
-
-const smallSpinnerStyle: React.CSSProperties = {
-  width: "20px",
-  height: "20px",
-  border: "2px solid rgba(124, 184, 130, 0.2)",
-  borderTopColor: "var(--color-accent)",
-  borderRadius: "50%",
-  animation: "spin 0.8s linear infinite",
-  flexShrink: 0,
-};

@@ -12,23 +12,15 @@ interface RecipeListProps {
 
 export function RecipeList({ recipes, loading, user }: RecipeListProps) {
   if (loading) {
-    return (
-      <p style={{ color: "var(--color-muted)", fontSize: "0.95rem" }}>
-        Carregando receitas...
-      </p>
-    );
+    return <p className="text-muted text-[0.95rem]">Carregando receitas...</p>;
   }
 
   if (recipes.length === 0) {
-    return (
-      <p style={{ color: "var(--color-muted)", fontSize: "0.95rem" }}>
-        Nenhuma receita importada ainda.
-      </p>
-    );
+    return <p className="text-muted text-[0.95rem]">Nenhuma receita importada ainda.</p>;
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+    <div className="flex flex-col gap-3">
       {recipes.map((recipe) => (
         <RecipeCard key={recipe.id} recipe={recipe} uid={user?.uid} />
       ))}
@@ -55,11 +47,11 @@ function RecipeCard({ recipe, uid }: RecipeCardProps) {
   }
 
   return (
-    <article style={cardStyle}>
-      <h3 style={{ fontSize: "1.1rem", fontWeight: 600, margin: 0, marginBottom: "0.25rem" }}>
+    <article className="bg-surface rounded-lg px-5 py-4 border border-border/60">
+      <h3 className="text-lg font-semibold mb-1">
         {recipe.title}
       </h3>
-      <div style={metaRow}>
+      <div className="flex gap-3 flex-wrap text-muted text-sm mb-1">
         {recipe.servings != null && <span>{recipe.servings} porções</span>}
         {recipe.prep_time_minutes != null && (
           <span>Preparo: {recipe.prep_time_minutes} min</span>
@@ -71,17 +63,13 @@ function RecipeCard({ recipe, uid }: RecipeCardProps) {
           <span>{recipe.ingredients.length} ingredientes</span>
         )}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+      <div className="flex items-center gap-4">
         {recipe.source_url && (
           <a
             href={recipe.source_url}
             target="_blank"
             rel="noopener noreferrer"
-            style={{
-              color: "var(--color-accent)",
-              fontSize: "0.8rem",
-              textDecoration: "none",
-            }}
+            className="text-accent text-sm no-underline hover:underline"
           >
             Ver fonte
           </a>
@@ -90,43 +78,18 @@ function RecipeCard({ recipe, uid }: RecipeCardProps) {
           <button
             type="button"
             onClick={handleAddToList}
-            style={actionBtnStyle}
+            className="bg-transparent border border-accent/40 text-accent text-sm font-medium rounded-md px-2.5 py-1 cursor-pointer hover:bg-accent/10 transition-colors"
           >
             Enviar para lista
           </button>
         )}
-        <Link to={`/editar-receita/${recipe.id}`} style={actionBtnStyle}>
+        <Link
+          to={`/editar-receita/${recipe.id}`}
+          className="bg-transparent border border-accent/40 text-accent text-sm font-medium rounded-md px-2.5 py-1 no-underline hover:bg-accent/10 transition-colors"
+        >
           Editar
         </Link>
       </div>
     </article>
   );
 }
-
-const cardStyle: React.CSSProperties = {
-  background: "var(--color-surface)",
-  borderRadius: "10px",
-  padding: "1rem 1.25rem",
-  border: "1px solid rgba(124, 184, 130, 0.15)",
-};
-
-const metaRow: React.CSSProperties = {
-  display: "flex",
-  gap: "0.75rem",
-  flexWrap: "wrap",
-  color: "var(--color-muted)",
-  fontSize: "0.8rem",
-  marginBottom: "0.35rem",
-};
-
-const actionBtnStyle: React.CSSProperties = {
-  background: "transparent",
-  border: "1px solid rgba(124, 184, 130, 0.4)",
-  color: "var(--color-accent)",
-  fontSize: "0.8rem",
-  fontWeight: 500,
-  borderRadius: "6px",
-  padding: "0.3rem 0.65rem",
-  cursor: "pointer",
-  textDecoration: "none",
-};

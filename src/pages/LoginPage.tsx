@@ -28,41 +28,10 @@ export function LoginPage() {
   const displayError = error ?? authError;
 
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "1.5rem",
-        background: "linear-gradient(180deg, var(--color-bg) 0%, #132a1e 100%)",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: "400px",
-          width: "100%",
-          textAlign: "center",
-        }}
-      >
-        <h1
-          style={{
-            fontSize: "2.5rem",
-            fontWeight: 700,
-            marginBottom: "0.5rem",
-            color: "var(--color-text)",
-          }}
-        >
-          PrepMaster
-        </h1>
-        <p
-          style={{
-            color: "var(--color-muted)",
-            marginBottom: "2.5rem",
-            lineHeight: 1.6,
-          }}
-        >
+    <main className="min-h-screen flex flex-col items-center justify-center p-6 bg-gradient-to-b from-bg to-[#0A1A12]">
+      <div className="max-w-[400px] w-full text-center">
+        <h1 className="text-4xl font-bold mb-2 text-text">PrepMaster</h1>
+        <p className="text-muted mb-10 leading-relaxed">
           Gerencie receitas, listas de compras e pré-preparos na palma da mão.
           IA para extrair receitas de vídeos e blogs.
         </p>
@@ -70,14 +39,7 @@ export function LoginPage() {
         {displayError && (
           <div
             role="alert"
-            style={{
-              padding: "1rem",
-              marginBottom: "1.5rem",
-              background: "rgba(244, 67, 54, 0.15)",
-              borderRadius: "8px",
-              color: "#ff8a80",
-              fontSize: "0.95rem",
-            }}
+            className="p-4 mb-6 bg-error/15 rounded-lg text-error text-[0.95rem]"
           >
             {displayError}
           </div>
@@ -87,22 +49,7 @@ export function LoginPage() {
           type="button"
           onClick={handleGoogleSignIn}
           disabled={isSigningIn}
-          style={{
-            width: "100%",
-            padding: "1rem 1.5rem",
-            fontSize: "1.1rem",
-            fontWeight: 600,
-            background: "var(--color-surface)",
-            color: "var(--color-text)",
-            border: "2px solid var(--color-accent)",
-            borderRadius: "12px",
-            cursor: isSigningIn ? "not-allowed" : "pointer",
-            opacity: isSigningIn ? 0.7 : 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "0.75rem",
-          }}
+          className="w-full px-6 py-4 text-lg font-semibold bg-surface text-text border-2 border-accent rounded-xl flex items-center justify-center gap-3 cursor-pointer disabled:cursor-not-allowed disabled:opacity-70 hover:bg-elevated transition-colors"
         >
           <GoogleIcon />
           {isSigningIn ? "Entrando..." : "Entrar com Google"}
@@ -110,13 +57,7 @@ export function LoginPage() {
 
         <InstallHint
           fallback={
-            <p
-              style={{
-                marginTop: "2rem",
-                fontSize: "0.85rem",
-                color: "var(--color-muted)",
-              }}
-            >
+            <p className="mt-8 text-sm text-muted">
               Instale como app para usar offline no supermercado.
             </p>
           }
@@ -148,4 +89,3 @@ function GoogleIcon() {
     </svg>
   );
 }
-

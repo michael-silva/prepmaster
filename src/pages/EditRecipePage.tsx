@@ -82,29 +82,27 @@ export function EditRecipePage({ user }: EditRecipePageProps) {
   }
 
   return (
-    <main style={{ minHeight: "100vh", padding: "1.5rem", background: "var(--color-bg)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.5rem" }}>
-        <Link to="/" style={{ color: "var(--color-muted)", textDecoration: "none", fontSize: "1.25rem" }}>
-          ←
-        </Link>
-        <h1 style={{ fontSize: "1.5rem", fontWeight: 600, margin: 0 }}>Editar Receita</h1>
+    <main className="min-h-screen p-6 bg-bg">
+      <div className="flex items-center gap-4 mb-6">
+        <Link to="/" className="text-muted no-underline text-xl">←</Link>
+        <h1 className="text-2xl font-semibold m-0">Editar Receita</h1>
       </div>
 
       {loading && (
-        <p style={{ color: "var(--color-muted)" }}>Carregando...</p>
+        <p className="text-muted">Carregando...</p>
       )}
 
       {error && (
-        <section style={cardStyle}>
-          <p style={{ color: "#ff8a80", margin: 0 }}>{error}</p>
-          <Link to="/" style={{ color: "var(--color-accent)", fontSize: "0.9rem", marginTop: "0.75rem", display: "inline-block" }}>
+        <section className="bg-surface rounded-xl p-6 border border-border">
+          <p className="text-error m-0">{error}</p>
+          <Link to="/" className="text-accent text-sm mt-3 inline-block">
             Voltar
           </Link>
         </section>
       )}
 
       {!loading && !error && initialData && (
-        <section style={cardStyle}>
+        <section className="bg-surface rounded-xl p-6 border border-border">
           <RecipeForm
             initialData={initialData}
             prepEntries={prepEntries}
@@ -116,10 +114,3 @@ export function EditRecipePage({ user }: EditRecipePageProps) {
     </main>
   );
 }
-
-const cardStyle: React.CSSProperties = {
-  background: "var(--color-surface)",
-  borderRadius: "12px",
-  padding: "1.5rem",
-  border: "1px solid rgba(124, 184, 130, 0.2)",
-};
